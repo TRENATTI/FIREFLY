@@ -194,7 +194,7 @@ function AS(client, noblox, currentUser, admin, token, applicationid, prefix) {
 								inline: true,
 							},
 							{
-								name: ":arrow_up: Rank",
+								name: `:arrow_up: ` + (new_total_points/60)^.5,
 								value: "#N/A",
 								inline: true,
 							},
