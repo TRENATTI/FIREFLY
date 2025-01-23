@@ -15,7 +15,7 @@ const moduleFiles = fs
 //
 
 function commands(client) {
-	if (process.env.DEVELOPER_MODE === true) return;
+	if (process.env.DEVELOPER_MODE == "true") return;
 	client.phrases_v12 = new Collection();
 	for (const file of moduleFiles) {
 		const phraseFile = require("./Phrases/" + file);
