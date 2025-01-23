@@ -41,6 +41,7 @@ module.exports = {
 		var ref;
 		const option = interaction.options.getString("option");
 		console.log(option)
+
 		if (option == "groups"){
 			ref = db.ref("blacklist/groups");
 			check(ref)
@@ -59,18 +60,75 @@ module.exports = {
 				send(bindedData);
 			});
 		}
+
 		async function send(bindedData) {
 			var y = "";
 			var x;
-			for (x of bindedData) {
-				y =
-					y +
-					`Name: \`\`${x.childKey}\`\` - ID: \`\`${x.childData.id}\`\` : Permanent: \`\`${x.childData.permanent}\`\`\n`;
+			if (option === "users") {
+				for (x of bindedData) {
+					y =
+						y +
+						`Name: \`\`${x.childKey}\`\` - Latest Username: \`\`${x.childData.latestUsername} : Permanent: \`\`${x.childData.permanent}\`\` Roblox Accounts: \`\`${x.childData.associatedAccounts.robloxAccounts}\`\` : Discord Accounts: \`\`${x.childData.associatedAccounts.discordAccounts}\`\`\n`;
+				}
+			} else {
+				return interaction.reply({
+					content: `Groups Feature Display is turned off temporarily.`,
+				})
 			}
 			console.log(y);
 			return interaction.reply({
 				content: `Test command; Data\n${y}}`,
+			})//** .then(function () {
+			//	console.log("Reply edited.");
+			//	createButtonBuilder(newembed);
+			//})
+			//
+			.catch(console.error);
+		}
+
+		async function createButtonBuilder(interactionembed) {
+			const start_bldisplay_actionrowbuilder =
+				new ActionRowBuilder().addComponents(
+					forward_button
+				);
+
+			const middle_bldisplay_actionrowbuilder =
+				new ActionRowBuilder().addComponents(
+					back_button,
+					forward_button
+				);
+
+			const end_bldisplay_actionrowbuilder =
+				new ActionRowBuilder().addComponents(
+					back_button
+				);
+
+			interaction
+				.editReply({
+					embeds: [interactionembed],
+					components: [start_bldisplay_actionrowbuilder],
+				})
+				.then(() => console.log(`Reply edited.`))
+				.catch(console.error);
+
+			const profile_to_groups_filter = (profile_to_groups_i) =>
+				profile_to_groups_i.user.id === interaction.user.id;
+
+			const profile_to_groups_collector =
+				interaction.channel.createMessageComponentCollector({
+					profile_to_groups_filter,
+					time: 20000,
+				});
+
+			profile_to_groups_collector.on(`collect`, async (i) => {
+				if (i.customId === `back`) {
+				
+				} else if (i, customId === `forward`) {
+
+				}
+
 			});
 		}
+
 	},
 };
