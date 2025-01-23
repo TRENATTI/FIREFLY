@@ -80,7 +80,11 @@ module.exports = {
                     replyToUser(value, type, inputNumberValue)
                 }
             } catch (error) {
-                console.log(error)
+                console.log(new Date(),
+                "| blacklist.js |", error)
+                interaction.reply({
+                    content: `Failed!`,
+                })
             }
 
         }
