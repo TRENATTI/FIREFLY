@@ -46,17 +46,17 @@ module.exports = {
         const db = admin.database();
 		const bindedData = [];
 		var ref;
-		const addorremove = interaction.options.getString("addorremove");
-		console.log(addorremove)
-        if (addorremove == "add"){
-			doAddOrRemoveMathematicReasoning(true)
-		} else if (addorremove == "remove") {
-			doAddOrRemoveMathematicReasoning(false)
-		}
+        async function isAuthorized() {
+            const addorremove = interaction.options.getString("addorremove");
+            if (addorremove == "add"){
+                doAddOrRemoveMathematicReasoning(true)
+            } else if (addorremove == "remove") {
+                doAddOrRemoveMathematicReasoning(false)
+            }
+        }
 
         async function doAddOrRemoveMathematicReasoning(value) {
             const type = interaction.options.getString("type");
-            console.log(type)
             if (type == "groups"){
                 ref = db.ref("blacklist/groups");
                 doTypeReference(value, ref)
@@ -69,14 +69,12 @@ module.exports = {
         async function doTypeReference(value, ref){
             const type = interaction.options.getString("input");
             const typeNumberValue = Number(type)
-            console.log(typeNumberValue)
             doInputBlacklist(value, ref, typeNumberValue)
         }
 
         async function doInputBlacklist(value, ref, typeNumberValue) {
             const type = interaction.options.getString("type");
             try {
-                console.log(typeNumberValue)
                 if (type == "groups"){
                     db.ref(`blacklist/groups/GROUP_${typeNumberValue}`).set({
                         id: typeNumberValue
@@ -105,5 +103,22 @@ module.exports = {
                 });
             }
         }
+
+        if (
+			interaction.user.id == "170639211182030850" ||
+			interaction.user.id == "463516784578789376" ||
+			interaction.user.id == "206090047462703104" ||
+			interaction.user.id == "1154775391597240391"
+		) {
+			isAuthorized();
+		} else {
+			return interaction
+				.reply({
+					content: `Sorry ${message.author}, but only the owners can run that command!`,
+				})
+				.then((message) =>
+					message.delete({ timeout: 5000, reason: "delete" })
+				);
+		}
     }
 }  
