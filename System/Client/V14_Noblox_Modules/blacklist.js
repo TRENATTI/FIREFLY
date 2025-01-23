@@ -44,6 +44,18 @@ module.exports = {
             option
                 .setName('permanent')
                 .setDescription('Permamency of Blacklist')
+		)
+        .addStringOption((option) =>
+            option
+                .setName('associated_roblox_accounts')
+                .setDescription('Associated Roblox Accounts')
+                .setRequired(false)
+		)
+        .addStringOption((option) =>
+            option
+                .setName('associated_discord_accounts')
+                .setDescription('Associated Discord Accounts')
+                .setRequired(false)
 		),
 	subdata: {
 		cooldown: 15,
@@ -64,15 +76,78 @@ module.exports = {
             const type = interaction.options.getString("type");
             const inputNumberValue = Number(interaction.options.getString("input"))
             const permanentBoolValue = Boolean(interaction.options.getBoolean("permanent"))
-            doInputBlacklist(value, type, inputNumberValue, permanentBoolValue)
+            findLatestUsername(value, type, inputNumberValue, permanentBoolValue)
+
         }
 
-        async function doInputBlacklist(value, type, inputNumberValue, permanentBoolValue) {
+        async function findLatestUsername(value, type, inputNumberValue, permanentBoolValue) {
+            var username
+            username = ``
+
+            var userIdsParam = {
+				userIds: [inputNumberValue],
+				excludeBannedUsers: false,
+			};
+
+            axios
+                .post(
+                    `https://users.roblox.com/v1//users`,
+                    userIdsParam
+                )
+                .then(function (response) {
+                    console.log(response.data);
+                    if (response.data.data.length == 0) {
+                        username = `N/A`
+                        setAssociatedRobloxAccounts(value, type, inputNumberValue, permanentBoolValue, username)
+                    } else {
+                        username = response.data.data[0].name;
+                        setAssociatedRobloxAccounts(value, type, inputNumberValue, permanentBoolValue, username)
+                    }
+            })
+        }
+
+        async function setAssociatedRobloxAccounts(value, type, inputNumberValue, permanentBoolValue, username) {
+            const robloxAccountsValue = Array(interaction.options.getString("associated_roblox_accounts"))
+            let robloxAccountsArray = `N/A`
+            if (Array.isArray(robloxAccountsValue)) {
+                if (robloxAccountsValue.length > 0) {
+                    robloxAccountsArray = robloxAccountsValue
+                    setAssociatedDiscordAccounts(value, type, inputNumberValue, permanentBoolValue, username, robloxAccountsArray)
+                }
+                else {
+                    setAssociatedDiscordAccounts(value, type, inputNumberValue, permanentBoolValue, username, robloxAccountsArray)
+                }
+            } else {
+                setAssociatedDiscordAccounts(value, type, inputNumberValue, permanentBoolValue, username, robloxAccountsArray)
+            }
+        }
+
+        async function setAssociatedDiscordAccounts(value, type, inputNumberValue, permanentBoolValue, username, robloxAccountsArray) {
+            const discordAccountsValue = Array(interaction.options.getString("associated_discord_accounts"))
+            let discordAccountsArray = `N/A`
+            if (Array.isArray(discordAccountsValue)) {
+                if (discordAccountsValue.length > 0) {
+                    discordAccountsArray = discordAccountsValue
+                    doInputBlacklist(value, type, inputNumberValue, permanentBoolValue, username, robloxAccountsArray, discordAccountsArray)
+                }
+                else {
+                    doInputBlacklist(value, type, inputNumberValue, permanentBoolValue, username, robloxAccountsArray, discordAccountsArray)
+                }
+            } else {
+                doInputBlacklist(value, type, inputNumberValue, permanentBoolValue, username, robloxAccountsArray, discordAccountsArray)
+            }
+        }
+        
+        async function doInputBlacklist(value, type, inputNumberValue, permanentBoolValue, username, robloxAccountsArray, discordAccountsArray) {
             try {
                 if (value == true) {
                     db.ref(`blacklist/${type}/${type.slice(0, -1)}_${inputNumberValue}`).set({
-                        id: inputNumberValue,
-                        permanent: permanentBoolValue
+                        permanent: permanentBoolValue,
+                        latestUsername: `${username}`,
+                        associatedAccounts: {
+                            robloxAccounts: `${robloxAccountsArray}`,
+                            discordAccounts: `${discordAccountsArray}`
+                        }
                     });
                     replyToUser(value, type, inputNumberValue)
                 } else {
