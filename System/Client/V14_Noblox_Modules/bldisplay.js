@@ -56,7 +56,7 @@ module.exports = {
 			for (x of bindedData) {
 				y =
 					y +
-					`Name: \`\`${x.childKey}\`\` - ID: \`\`${x.childData.groupId}\`\`\n`;
+					`Name: \`\`${x.childKey}\`\` - ID: \`\`${x.childData.id}\`\` : Permanent: \`\`${x.childData.permanent}\`\`\n`;
 			}
 			console.log(y);
 			return interaction.reply({
