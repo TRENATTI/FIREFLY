@@ -45,7 +45,7 @@ module.exports = {
 	async execute(interaction, noblox, admin) {
         const db = admin.database();
 		const bindedData = [];
-		var ref;
+
         async function isAuthorized() {
             const addorremove = interaction.options.getString("addorremove");
             if (addorremove == "add"){
@@ -55,55 +55,32 @@ module.exports = {
             }
         }
 
-        async function doAddOrRemoveMathematicReasoning(value) {
+        async function doAddOrRemoveMathematicReasoning(value){
             const type = interaction.options.getString("type");
-            if (type == "groups"){
-                ref = db.ref("blacklist/groups");
-                doTypeReference(value, ref)
-            } else if (type == "users") {
-                ref = db.ref("blacklist/users");
-                doTypeReference(value, ref)
-            }
+            const typeNumberValue = Number(interaction.options.getString("input"))
+            doInputBlacklist(value, type, typeNumberValue)
         }
 
-        async function doTypeReference(value, ref){
-            const type = interaction.options.getString("input");
-            const typeNumberValue = Number(type)
-            doInputBlacklist(value, ref, typeNumberValue)
-        }
-
-        async function doInputBlacklist(value, ref, typeNumberValue) {
-            const type = interaction.options.getString("type");
+        async function doInputBlacklist(value, type, typeNumberValue) {
             try {
-                if (type == "groups"){
-                    db.ref(`blacklist/groups/GROUP_${typeNumberValue}`).set({
+                if (value == true) {
+                    db.ref(`blacklist/${type}/${type}_${typeNumberValue}`).set({
                         id: typeNumberValue
                     });
-                    replyToUser(value, ref, typeNumberValue)
-                } else if (type == "users") {
-                    db.ref(`blacklist/users/GROUP_${typeNumberValue}`).set({
-                        id: typeNumberValue
-                    });
-                    replyToUser(value, ref, typeNumberValue)
+                    replyToUser(value, type, typeNumberValue)
+                } else {
+
                 }
             } catch (error) {
                 console.log(error)
             }
 
         }
-        async function replyToUser(value, ref, typeNumberValue) {
-            const type = interaction.options.getString("type");
-            if (type == "groups"){
-                interaction.reply({
-                    content: `Blacklisted Group ID: ${typeNumberValue}`,
+        async function replyToUser(value, type, typeNumberValue) {
+             interaction.reply({
+                    content: `Blacklisted ${type}Id: ${typeNumberValue}`,
                 });
-            } else if (type == "users") {
-                interaction.reply({
-                    content: `Blacklisted User ID: ${typeNumberValue}`,
-                });
-            }
         }
-
         if (
 			interaction.user.id == "170639211182030850" ||
 			interaction.user.id == "463516784578789376" ||
