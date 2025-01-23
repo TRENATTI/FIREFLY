@@ -38,13 +38,18 @@ module.exports = {
             option
                 .setName('input')
                 .setDescription('User ID / Group ID')
+                .setRequired(true)
+		)
+        .addBooleanOption((option) =>
+            option
+                .setName('permanent')
+                .setDescription('Permamency of Blacklist')
 		),
 	subdata: {
 		cooldown: 15,
 	},
 	async execute(interaction, noblox, admin) {
         const db = admin.database();
-		const bindedData = [];
 
         async function isAuthorized() {
             const addorremove = interaction.options.getString("addorremove");
@@ -57,30 +62,41 @@ module.exports = {
 
         async function doAddOrRemoveMathematicReasoning(value){
             const type = interaction.options.getString("type");
-            const typeNumberValue = Number(interaction.options.getString("input"))
-            doInputBlacklist(value, type, typeNumberValue)
+            const inputNumberValue = Number(interaction.options.getString("input"))
+            const permanentBoolValue = Boolean(interaction.options.getBoolean("permanent"))
+            doInputBlacklist(value, type, inputNumberValue, permanentBoolValue)
         }
 
-        async function doInputBlacklist(value, type, typeNumberValue) {
+        async function doInputBlacklist(value, type, inputNumberValue, permanentBoolValue) {
             try {
                 if (value == true) {
-                    db.ref(`blacklist/${type}/${type}_${typeNumberValue}`).set({
-                        id: typeNumberValue
+                    db.ref(`blacklist/${type}/${type}_${inputNumberValue}`).set({
+                        id: inputNumberValue,
+                        permanent: permanentBoolValue
                     });
-                    replyToUser(value, type, typeNumberValue)
+                    replyToUser(value, type, inputNumberValue)
                 } else {
-
+                    db.ref(`blacklist/${type}/${type}_${inputNumberValue}`).remove()
+                    replyToUser(value, type, inputNumberValue)
                 }
             } catch (error) {
                 console.log(error)
             }
 
         }
-        async function replyToUser(value, type, typeNumberValue) {
-             interaction.reply({
-                    content: `Blacklisted ${type}Id: ${typeNumberValue}`,
+
+        async function replyToUser(value, type, inputNumberValue) {
+            if (value == true){
+                interaction.reply({
+                    content: `Blacklisted ${type}Id: ${inputNumberValue}`,
                 });
+            } else {
+                interaction.reply({
+                    content: `Unblacklisted ${type}Id: ${inputNumberValue}`,
+                });
+            }
         }
+
         if (
 			interaction.user.id == "170639211182030850" ||
 			interaction.user.id == "463516784578789376" ||
