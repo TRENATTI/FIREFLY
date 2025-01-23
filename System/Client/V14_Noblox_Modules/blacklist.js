@@ -92,11 +92,11 @@ module.exports = {
         async function replyToUser(value, type, inputNumberValue) {
             if (value == true){
                 interaction.reply({
-                    content: `Blacklisted ${type}Id: ${inputNumberValue}`,
+                    content: `Blacklisted ${type.slice(0, -1)} Id: ${inputNumberValue}`,
                 });
             } else {
                 interaction.reply({
-                    content: `Unblacklisted ${type}Id: ${inputNumberValue}`,
+                    content: `Unblacklisted ${type.slice(0, -1)} Id: ${inputNumberValue}`,
                 });
             }
         }
