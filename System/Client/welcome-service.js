@@ -11,7 +11,7 @@ function WS(client) {
 	];
 
 	client.on("guildMemberAdd", (member) => {
-		if (process.env.DEVELOPER_MODE === true) return;
+		if (process.env.DEVELOPER_MODE == "true") return;
 		if (!member.guild.id == 215221157937283075) return;
 		embedX = {
 			title: "",

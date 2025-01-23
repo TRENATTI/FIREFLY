@@ -23,118 +23,174 @@ module.exports = {
 					{ name: "Add", value: "add" },
 					{ name: "Remove", value: "remove" }
 				),
+        )
+        .addStringOption((option) =>
             option
 				.setName("type")
 				.setDescription("<add/remove>")
 				.setRequired(true)
 				.addChoices(
-					{ name: "User", value: "user" },
-					{ name: "Group", value: "group" }
+					{ name: "User", value: "users" },
+					{ name: "Group", value: "groups" }
 				),
+            )
+        .addStringOption((option) =>
             option
                 .setName('input')
                 .setDescription('User ID / Group ID')
+                .setRequired(true)
+		)
+        .addBooleanOption((option) =>
+            option
+                .setName('permanent')
+                .setDescription('Permamency of Blacklist')
+		)
+        .addStringOption((option) =>
+            option
+                .setName('associated_roblox_accounts')
+                .setDescription('Associated Roblox Accounts')
+                .setRequired(false)
+		)
+        .addStringOption((option) =>
+            option
+                .setName('associated_discord_accounts')
+                .setDescription('Associated Discord Accounts')
+                .setRequired(false)
 		),
 	subdata: {
 		cooldown: 15,
 	},
 	async execute(interaction, noblox, admin) {
         const db = admin.database();
-		const bindedData = [];
-		var ref;
-		const addorremove = interaction.options.getString("addorremove");
-		console.log(addorremove)
-        if (addorremove == "add"){
-			doAddOrRemoveMathematicReasoning(true)
-		} else if (addorremove == "remove") {
-			ref = db.ref("blacklist/users");
-			doAddOrRemoveMathematicReasoning(false)
-		}
 
-        async function doAddOrRemoveMathematicReasoning(value) {
+        async function isAuthorized() {
+            const addorremove = interaction.options.getString("addorremove");
+            if (addorremove == "add"){
+                doAddOrRemoveMathematicReasoning(true)
+            } else if (addorremove == "remove") {
+                doAddOrRemoveMathematicReasoning(false)
+            }
+        }
+
+        async function doAddOrRemoveMathematicReasoning(value){
             const type = interaction.options.getString("type");
-            if (type == "groups"){
-                ref = db.ref("blacklist/groups");
-                doTypeReference(value, ref)
-            } else if (type == "users") {
-                ref = db.ref("blacklist/users");
-                doTypeReference(value, ref)
-            }
-        }
-
-        async function doTypeReference(value, ref){
-            const type = interaction.options.getString("input");
-            try {
-                const typeNumberValue = Number(type)
-                doInputBlacklist(value, ref, typeNumberValue)
-            } catch (error) {
-                console.log(error)
-            }
-        }
-
-        async function doInputBlacklist(value, ref, typeNumberValue) {
-
+            const inputNumberValue = Number(interaction.options.getString("input"))
+            const permanentBoolValue = Boolean(interaction.options.getBoolean("permanent"))
+            findLatestUsername(value, type, inputNumberValue, permanentBoolValue)
 
         }
 
-        if (args[0] == 'add'){ 
-            addorremove('add')
-        } else if (args[0] == 'remove') {
-            addorremove('remove')
-        } else {
-            return message.reply (`You didn't provide an argument to add or remove! Try "aa>help blacklist" for this commands usage.`)
-        }
-        function addorremove(value){
-            
-            if (args[1] == 'group') {
+        async function findLatestUsername(value, type, inputNumberValue, permanentBoolValue) {
+            var username
+            username = ``
 
-                if (!isNum(args[2])) return message.reply(`You didn't provide an argument that's a number! Try "aa>help blacklist" for this commands usage.`)
-                axios.get('https://groups.roblox.com/v1/groups/' + args[1])
-                    .then(function (response) {
-                       if (!response.data.errors) {
-                            var groupName = response.data.name
-                            var workinEmbed = new Discord.MessageEmbed()
-                        		.setDescription(`Working on the blacklist...`);
-                            message.channel.send(workinEmbed).then(message => message.delete({ timeout: 1000, reason: "delete working message" }));
-                            axios.get(`${process.env.SA_DATABASEURL}blacklist/groups/${args[1]}.json`)
-                                .then(function (response) {
-                                    console.log(response.data)
-                                    if (!response.data){
-                                        gbit(true);
-                                    }else{
-                                        gbit(false);
-                                    }
-                                })
-                
-                            function gbit(anothervalue){
-                                if (anothervalue === false && value == 'add'){return message.channel.send(groupName + ` is already a blacklisted group!`)}
-                                if (anothervalue === false && value == 'add'){return message.channel.send(groupName + ` is already a blacklisted group!`)}
-                                db.ref(`blacklist/groups/${args[1]}`).set({
-                                  name: groupName
-                                });
-                                var doneEmbed = new Discord.MessageEmbed()
-                                    .setColor(0xFF8C00)
-                                    .setDescription(`Created ${rblx_username}'s profile`)
-                                return message.channel.send(doneEmbed)
-                            }
-                       } else {
-                            return message.reply (`You didn't provide an existing group's id!`)
-                       }
-                    });
-    
-            } else if (args[1] == 'user') {
-                
-            } else {
-                    return message.reply (`You didn't provide an argument for whether you want to do a user or group! Try "aa>help blacklist" for this commands usage.`)
-            }
-            axios.get('https://groups.roblox.com/v1/groups/' + args[1])
+            var userIdsParam = {
+				userIds: [inputNumberValue],
+				excludeBannedUsers: false,
+			};
+
+            axios
+                .post(
+                    `https://users.roblox.com/v1//users`,
+                    userIdsParam
+                )
                 .then(function (response) {
-                   if (!response.data.errors) {
-                       getRobloxUsername(true, response.data.roblox_id)
-                   } else {
-                       return message.reply
-                   }
-                });
+                    console.log(response.data);
+                    if (response.data.data.length == 0) {
+                        username = `N/A`
+                        setAssociatedRobloxAccounts(value, type, inputNumberValue, permanentBoolValue, username)
+                    } else {
+                        username = response.data.data[0].name;
+                        setAssociatedRobloxAccounts(value, type, inputNumberValue, permanentBoolValue, username)
+                    }
+            })
         }
+
+        async function setAssociatedRobloxAccounts(value, type, inputNumberValue, permanentBoolValue, username) {
+            const robloxAccountsValue = Array(interaction.options.getString("associated_roblox_accounts"))
+            let robloxAccountsArray = `N/A`
+            if (Array.isArray(robloxAccountsValue)) {
+                if (robloxAccountsValue.length > 0) {
+                    robloxAccountsArray = robloxAccountsValue
+                    setAssociatedDiscordAccounts(value, type, inputNumberValue, permanentBoolValue, username, robloxAccountsArray)
+                }
+                else {
+                    setAssociatedDiscordAccounts(value, type, inputNumberValue, permanentBoolValue, username, robloxAccountsArray)
+                }
+            } else {
+                setAssociatedDiscordAccounts(value, type, inputNumberValue, permanentBoolValue, username, robloxAccountsArray)
+            }
+        }
+
+        async function setAssociatedDiscordAccounts(value, type, inputNumberValue, permanentBoolValue, username, robloxAccountsArray) {
+            const discordAccountsValue = Array(interaction.options.getString("associated_discord_accounts"))
+            let discordAccountsArray = `N/A`
+            if (Array.isArray(discordAccountsValue)) {
+                if (discordAccountsValue.length > 0) {
+                    discordAccountsArray = discordAccountsValue
+                    doInputBlacklist(value, type, inputNumberValue, permanentBoolValue, username, robloxAccountsArray, discordAccountsArray)
+                }
+                else {
+                    doInputBlacklist(value, type, inputNumberValue, permanentBoolValue, username, robloxAccountsArray, discordAccountsArray)
+                }
+            } else {
+                doInputBlacklist(value, type, inputNumberValue, permanentBoolValue, username, robloxAccountsArray, discordAccountsArray)
+            }
+        }
+        
+        async function doInputBlacklist(value, type, inputNumberValue, permanentBoolValue, username, robloxAccountsArray, discordAccountsArray) {
+            try {
+                if (value == true) {
+                    db.ref(`blacklist/${type}/${type.slice(0, -1)}_${inputNumberValue}`).set({
+                        permanent: permanentBoolValue,
+                        latestUsername: `${username}`,
+                        associatedAccounts: {
+                            robloxAccounts: `${robloxAccountsArray}`,
+                            discordAccounts: `${discordAccountsArray}`
+                        }
+                    });
+                    replyToUser(value, type, inputNumberValue)
+                } else {
+                    db.ref(`blacklist/${type}/${type.slice(0, -1)}_${inputNumberValue}`).remove()
+                    replyToUser(value, type, inputNumberValue)
+                }
+            } catch (error) {
+                console.log(new Date(),
+                "| blacklist.js |", error)
+                interaction.reply({
+                    content: `Failed!`,
+                })
+            }
+
+        }
+
+        async function replyToUser(value, type, inputNumberValue) {
+            if (value == true){
+                interaction.reply({
+                    content: `Blacklisted ${type.slice(0, -1)} Id: ${inputNumberValue}`,
+                });
+            } else {
+                interaction.reply({
+                    content: `Unblacklisted ${type.slice(0, -1)} Id: ${inputNumberValue}`,
+                });
+            }
+        }
+
+        if (
+			interaction.user.id == "170639211182030850" ||
+			interaction.user.id == "463516784578789376" ||
+			interaction.user.id == "206090047462703104" ||
+			interaction.user.id == "1154775391597240391"
+		) {
+			isAuthorized();
+		} else {
+			return interaction
+				.reply({
+					content: `Sorry ${message.author}, but only the owners can run that command!`,
+				})
+				.then((message) =>
+					message.delete({ timeout: 5000, reason: "delete" })
+				);
+		}
     }
 }  

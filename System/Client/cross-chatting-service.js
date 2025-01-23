@@ -7,7 +7,7 @@ async function CCS(client, noblox, currentUser, admin) {
 	var db = admin.database();
 	client.on("messageCreate", async (message) => {
 		if (message.author.bot) return;
-		if (process.env.DEVELOPER_MODE == "true") return;
+		if (process.env.DEVELOPER_MODE == "true" || process.env.DATABASE_MODE == "true") return;
 		var iter = 0;
 		var ref = db.ref("szeebe").child("aa-universe");
 		try {
