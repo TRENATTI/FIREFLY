@@ -9,6 +9,15 @@ const {
 	EmbedBuilder,
 } = require("discord.js");
 
+const back_button = new ButtonBuilder()
+	.setCustomId("back")
+	.setLabel("Back")
+	.setStyle(ButtonStyle.Secondary);
+const forward_button = new ButtonBuilder()
+	.setCustomId("forward")
+	.setLabel("Forward")
+	.setStyle(ButtonStyle.Secondary);
+
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName("bldisplay")
