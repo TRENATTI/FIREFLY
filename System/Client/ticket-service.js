@@ -11,7 +11,7 @@ async function TS(
 	prefix
 ) {
 	client.once("ready", async () => {
-		if (process.env.DEVELOPER_MODE === true) return;
+		if (process.env.DEVELOPER_MODE == "true" || process.env.DATABASE_MODE == "true") return;
 		const guild = await client.guilds.fetch(`793960635628781618`);
 		const channel = await guild.channels.fetch("1235751537901568070");
 		const response = await channel.messages.fetch("1235757142506602526");
