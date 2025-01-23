@@ -70,13 +70,13 @@ module.exports = {
         async function doInputBlacklist(value, type, inputNumberValue, permanentBoolValue) {
             try {
                 if (value == true) {
-                    db.ref(`blacklist/${type}/${type}_${inputNumberValue}`).set({
+                    db.ref(`blacklist/${type}/${type.slice(0, -1)}_${inputNumberValue}`).set({
                         id: inputNumberValue,
                         permanent: permanentBoolValue
                     });
                     replyToUser(value, type, inputNumberValue)
                 } else {
-                    db.ref(`blacklist/${type}/${type}_${inputNumberValue}`).remove()
+                    db.ref(`blacklist/${type}/${type.slice(0, -1)}_${inputNumberValue}`).remove()
                     replyToUser(value, type, inputNumberValue)
                 }
             } catch (error) {
