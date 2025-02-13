@@ -22,20 +22,18 @@ function RJS(client,
 				)
 				.then(function (response) {
 					console.log(response.data);
-					if (response.data.data.length != 0) {
-						if (response.data.nextPageCursor == null) {
-							evt.emit('handle', request, false);
-							console.log(
-								new Date(), "| roblox-join-service.js |", "Denied!", request.requester.userId)
-							return;
-						}
+					if (response.data.data.length < 100) {
+						evt.emit('handle', request, false);
+						console.log(
+							new Date(), "| roblox-join-service.js |", "Denied!", request.requester.userId)
+						return;
 					}
 					evt.emit('handle', request, true, function () {
 						console.log(
 							new Date(), "| roblox-join-service.js |", "Accepted!", request.requester.userId)
 					});
 				})
-				})
+			})
 
 }
 
