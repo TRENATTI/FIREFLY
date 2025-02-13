@@ -47,7 +47,6 @@ module.exports = {
 				.setDescription("Thumbnail to add.")
 				.setRequired(false)
 		),
-	subda,
 	subdata: {
 		cooldown: 15,
 	},
