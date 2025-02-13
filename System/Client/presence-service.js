@@ -17,7 +17,7 @@ function PS(
 		);
 		//client.user.setActivity('\"' + prefix + '\"', {type: "LISTENING"});
 		const activities = [
-			`Logged in on Roblox as ${currentUser.UserName} [${currentUser.UserID}]`,
+			`Logged in on Roblox as ${currentUser.name} [${currentUser.id}]`,
 			`${client.guilds.cache.reduce(
 				(a, b) => a + b.memberCount,
 				0
