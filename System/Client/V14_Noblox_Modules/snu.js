@@ -40,6 +40,12 @@ module.exports = {
 				.setName("button")
 				.setDescription("Button Message to add.")
 				.setRequired(false)
+		)
+		.addStringOption((option) =>
+			option
+				.setName("thumbnail")
+				.setDescription("Thumbnail to add.")
+				.setRequired(false)
 		),
 	subdata: {
 		cooldown: 15,
@@ -51,6 +57,7 @@ module.exports = {
 			const targetChannel = interaction.options.getString("channelid");
 			const targetServer = interaction.options.getString("serverid");
 			const buttonValue = interaction.options.getString("button");
+			const thumbnailValue = interaction.options.getString("thumbnail");
 			const messageValue = eval(
 				"`" + interaction.options.getString(`message`) + "`"
 			);
@@ -60,13 +67,14 @@ module.exports = {
 				targetChannel,
 				targetServer,
 				messageValue,
-				buttonValue
+				buttonValue,
+				thumbnailValue
 			);
 			const guild = await interaction.client.guilds.fetch(targetServer);
 			const channel = await guild.channels.fetch(targetChannel);
 			const message = await channel.messages.fetch(targetMessage);
 
-			const embedAA = {
+			let embedAA = {
 				author: {
 					name: interaction.user.username,
 					icon_url: interaction.user.displayAvatarURL({
@@ -85,6 +93,7 @@ module.exports = {
 				timestamp: new Date(),
 			};
 
+
 			const snu_button = new ButtonBuilder()
 				.setCustomId("button")
 				.setLabel(buttonValue || "")
@@ -94,12 +103,67 @@ module.exports = {
 			);
 
 			if (buttonValue == "-") {
-				message.edit({ embeds: [embedAA], components: [] });
+				if (thumbnailValue == "-") {
+					message.edit({ embeds: [embedAA], components: [] });
+				} else {
+					let embedThumbnailAA = {
+						author: {
+							name: interaction.user.username,
+							icon_url: interaction.user.displayAvatarURL({
+								format: "png",
+								dynamic: true,
+							}),
+						},
+						footer: {
+							text: message.guild.name,
+							icon_url: message.guild.iconURL({
+								format: "png",
+								dynamic: true,
+							}),
+						},
+						thumbnail: {
+							url: thumbnailValue
+						},
+						  
+						description: messageValue,
+						timestamp: new Date(),
+					};
+					message.edit({ embeds: [embedThumbnailAA], components: [] });
+				}
 			} else {
-				message.edit({
-					embeds: [embedAA],
-					components: [snu_actionrowbuilder],
-				});
+				if (thumbnailValue == "-") {
+					message.edit({
+						embeds: [embedAA],
+						components: [snu_actionrowbuilder],
+					});
+				} else {
+					let embedThumbnailAA = {
+						author: {
+							name: interaction.user.username,
+							icon_url: interaction.user.displayAvatarURL({
+								format: "png",
+								dynamic: true,
+							}),
+						},
+						footer: {
+							text: message.guild.name,
+							icon_url: message.guild.iconURL({
+								format: "png",
+								dynamic: true,
+							}),
+						},
+						thumbnail: {
+							url: thumbnailValue
+						},
+						  
+						description: messageValue,
+						timestamp: new Date(),
+					};
+					message.edit({
+						embeds: [embedThumbnailAA],
+						components: [snu_actionrowbuilder],
+					});
+				}
 			}
 		}
 		if (
