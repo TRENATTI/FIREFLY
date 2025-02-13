@@ -114,7 +114,7 @@ async function startNoblox(client) {
 	console.log(
 		new Date(),
 		`| index.js |`,
-		`Logged in as ${currentUser.UserName} [${currentUser.UserID}]`
+		`Logged in as ${currentUser.name} [${currentUser.id}]`
 	);
 
 	// Do everything else, calling functions and the like.
