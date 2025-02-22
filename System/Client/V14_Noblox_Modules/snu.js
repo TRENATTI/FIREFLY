@@ -166,21 +166,11 @@ module.exports = {
 				}
 			}
 		}
-		if (
-			interaction.user.id == "170639211182030850" ||
-			interaction.user.id == "463516784578789376" ||
-			interaction.user.id == "206090047462703104" ||
-			interaction.user.id == "1154775391597240391"
-		) {
-			interaction
+
+		interaction
 				.reply({
 					content: `Updating message...`,
 				})
 				.then(updateMsg(interaction));
-		} else {
-			return interaction.reply({
-				content: `Sorry ${message.author}, but only the owners can run that command!`,
-			});
-		}
 	},
 };
