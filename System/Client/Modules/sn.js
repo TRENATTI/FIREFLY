@@ -4,7 +4,6 @@ module.exports = {
 	aliases: ["sn"],
 	execute(message, args) {
 		stringargs = message.content.slice(process.env.PREFIX.length + 3);
-		if (!message.author.id == 170639211182030850) return;
 		const embedAA = {
 			author: {
 				name: message.author.username,

@@ -10,7 +10,7 @@ async function RJS(client,
 	token,
 	applicationid,
 	prefix) {
-		
+		if (process.env.DEVELOPER_MODE == "true" || process.env.DATABASE_MODE == "true") return;
 		console.log(
 			new Date(), "| roblox-join-service.js |", "Ready!")
 		const guild = await client.guilds.fetch(`1314823843315187742`);
