@@ -23,7 +23,7 @@ async function mcstatus(client, noblox, currentUser, admin) {
 						//			console.log(true);
 						sendFLIPPINGDATA(
 							"1365069346799357993",//thisObject.val().messageId,
-							"857383487546720257",//thisObject.val().channelId,
+							"856694288549150741",//thisObject.val().channelId,
 							"215221157937283075",//hisObject.val().serverId,
 							//thisObject.key
 						);
