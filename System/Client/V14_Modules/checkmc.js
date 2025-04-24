@@ -11,7 +11,7 @@ module.exports = {
 		cooldown: 3,
 	},
 	async execute(interaction) {
-		MinecraftServerListPing.ping(4, "scriptoria.apexmc.co", 25681, 3000)
+		MinecraftServerListPing.ping(4, "scriptoria.apexmc.co", 25565, 3000)
 			.then((response) => {
 				console.log(response);
 
