@@ -22,7 +22,7 @@ module.exports = {
 			option
 				.setName("mention")
 				.setDescription("Mention everyone.")
-				.setRequired(true)
+				.setRequired(false)
 		),
 	subdata: {
 		cooldown: 15,
@@ -60,8 +60,11 @@ module.exports = {
 						const channel = await guild.channels.fetch(
 							guildData[i].childData.channelId
 						);
-	
-						channel.send({ content: `${messageValue}\n-# SENT BY: ${interaction.user.username} • FROM: ${interaction.guild.name}` });
+						if (mentionValue == true) {
+							channel.send({ content: `${messageValue}\n-# SENT BY: ${interaction.user.username} • FROM: ${interaction.guild.name} || @everyone ||` });
+						} else {
+							channel.send({ content: `${messageValue}\n-# SENT BY: ${interaction.user.username} • FROM: ${interaction.guild.name}` });
+						}
 					} catch (error) {
 						console.log(error);
 					}
