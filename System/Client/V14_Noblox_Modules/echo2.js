@@ -17,6 +17,12 @@ module.exports = {
 				.setName("message")
 				.setDescription("Message to add.")
 				.setRequired(true)
+		)
+		.addBooleanOption((option) =>
+			option
+				.setName("mention")
+				.setDescription("Mention everyone.")
+				.setRequired(true)
 		),
 	subdata: {
 		cooldown: 15,
@@ -25,6 +31,7 @@ module.exports = {
 		const messageValue = eval(
 			"`" + interaction.options.getString(`message`) + "`"
 		);
+		const mentionValue = interaction.option.getBoolean(`mention`)
 		async function isAuthorized() {
 			var db = admin.database();
 			const guilddata = [];
