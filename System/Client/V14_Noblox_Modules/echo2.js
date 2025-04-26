@@ -31,7 +31,7 @@ module.exports = {
 		const messageValue = eval(
 			"`" + interaction.options.getString(`message`) + "`"
 		);
-		const mentionValue = interaction.option.getBoolean(`mention`)
+		const mentionValue = interaction.options.getBoolean(`mention`)
 		async function isAuthorized() {
 			var db = admin.database();
 			const guilddata = [];
@@ -65,6 +65,7 @@ module.exports = {
 						} else {
 							channel.send({ content: `${messageValue}\n-# SENT BY: ${interaction.user.username} • FROM: ${interaction.guild.name}` });
 						}
+
 					} catch (error) {
 						console.log(error);
 					}
