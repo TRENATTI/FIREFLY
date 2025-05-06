@@ -17,6 +17,12 @@ module.exports = {
 				.setName("message")
 				.setDescription("Message to add.")
 				.setRequired(true)
+		)
+		.addBooleanOption((option) =>
+			option
+				.setName("mention")
+				.setDescription("Mention everyone.")
+				.setRequired(false)
 		),
 	subdata: {
 		cooldown: 15,
@@ -25,6 +31,7 @@ module.exports = {
 		const messageValue = eval(
 			"`" + interaction.options.getString(`message`) + "`"
 		);
+		const mentionValue = interaction.options.getBoolean(`mention`)
 		async function isAuthorized() {
 			var db = admin.database();
 			const guilddata = [];
@@ -53,8 +60,12 @@ module.exports = {
 						const channel = await guild.channels.fetch(
 							guildData[i].childData.channelId
 						);
-	
-						channel.send({ content: `${messageValue}\n-# SENT BY: ${interaction.user.username} • FROM: ${interaction.guild.name}` });
+						if (mentionValue == true) {
+							channel.send({ content: `${messageValue}\n-# SENT BY: ${interaction.user.username} • FROM: ${interaction.guild.name} || @everyone ||` });
+						} else {
+							channel.send({ content: `${messageValue}\n-# SENT BY: ${interaction.user.username} • FROM: ${interaction.guild.name}` });
+						}
+
 					} catch (error) {
 						console.log(error);
 					}
