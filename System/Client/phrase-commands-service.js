@@ -2,9 +2,14 @@ require("dotenv").config();
 
 const fs = require("fs");
 const { Collection } = require("discord.js");
+const cooldown = new Set();
+const cooldownTime = 60000*2
+
 //
 
 const moduleSystem = "./System/Client/Phrases";
+
+
 
 //
 
@@ -24,6 +29,13 @@ function commands(client) {
 	client.on("messageCreate", (message) => {
 		if (message.author.bot) return;
 		if (message.client.user.id == 481512678163087363) return;
+
+		if (cooldown.has(true)) return; 
+		cooldown.add(true);
+		setTimeout(() => {
+          cooldown.delete(true);
+        }, cooldownTime);
+		
 		const phraseName = message.content.toLowerCase();
 		const phrase =
 			client.phrases_v12.get(phraseName) ||
