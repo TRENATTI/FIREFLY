@@ -17,7 +17,6 @@ function SPS(
         readyStatus: false,
         checkUpdate: false
     });
-    keepAlive();
     function formatTime() { //Credits to himika#0001 and never#0001
         const date = new Date();
         const options = {
@@ -68,6 +67,7 @@ function SPS(
     try {
         const mySecret = process.env.HOLDINGACCOUNTTOKEN
         client.login(mySecret);
+        keepAlive();
     } catch (error) {
         console.log(error)
     }
