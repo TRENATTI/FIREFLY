@@ -1,5 +1,5 @@
 const Discord = require('discord.js-selfbot-v13');
-const keepAlive = require('../Server/server.js');
+const keepAlive = require('../Server/server-sjs.js');
 
 require("dotenv").config();
 
@@ -17,10 +17,10 @@ function SPS(
         readyStatus: false,
         checkUpdate: false
     });
-    function formatTime() { //Credits to himika#0001 and never#0001
+    function formatTime() { 
         const date = new Date();
         const options = {
-            timeZone: 'GMT', //https://www.zeitverschiebung.net/en/ and find your city and enter here
+            timeZone: 'GMT', 
             hour12: true,
             hour: 'numeric',
             minute: 'numeric'
