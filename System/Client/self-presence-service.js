@@ -1,4 +1,6 @@
 const Discord = require('discord.js-selfbot-v13');
+const keepAlive = require('../Server/server.js');
+
 require("dotenv").config();
 
 const { ActivityType } = require("discord.js"); // Discord.js V14
@@ -15,7 +17,7 @@ function SPS(
         readyStatus: false,
         checkUpdate: false
     });
-    
+    keepAlive();
     function formatTime() { //Credits to himika#0001 and never#0001
         const date = new Date();
         const options = {
