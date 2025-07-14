@@ -76,9 +76,11 @@ function startApp(currentUser, client, admin) {
 		.filter((file) => file.endsWith(".js"));
 
 	for (const file of serverFiles) {
-		const serverFile = require(`./System/Server/${file}`);
-		serverFile();
+		//const serverFile = require(`./System/Server/${file}`);
+		//serverFile();
 	};
+	const server = require(`./System/Server/server.js`)
+	server();
 }
 
 //
