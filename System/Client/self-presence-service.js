@@ -20,7 +20,7 @@ function SPS(
     function formatTime() { 
         const date = new Date();
         const options = {
-            timeZone: 'GMT', 
+            timeZone: 'ET', 
             hour12: true,
             hour: 'numeric',
             minute: 'numeric'
@@ -40,7 +40,7 @@ function SPS(
             .setName('to the stars...')
             .setDetails(`to the stars...`)
             .setStartTimestamp(Date.now())
-            .setAssetsLargeImage('https://cdn.discordapp.com/banners/255079576059772928/cf6676c8239cebd582a15d02e1802f82.webp?size=1024') //You can put links in tenor or discord and etc.
+            .setAssetsLargeImage('https://cdn.discordapp.com/avatars/809207462997000194/a_e024f84f5fb5afdf0ca6d4239b8fa983.gif') //You can put links in tenor or discord and etc.
         //.setAssetsLargeText('Large Text') //Text when you hover the Large image
         //.setAssetsSmallImage('Small Image URL') //You can put links in tenor or discord and etc.
         //.setAssetsSmallText('Small Text') //Text when you hover the Small image
