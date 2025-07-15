@@ -20,7 +20,7 @@ function SPS(
     function formatTime() { 
         const date = new Date();
         const options = {
-            timeZone: 'ET', 
+            timeZone: 'EST', 
             hour12: true,
             hour: 'numeric',
             minute: 'numeric'
