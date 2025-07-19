@@ -84,9 +84,12 @@ module.exports = {
 		}
 		async function reply(y){
 			console.log(y);
-			return interaction.reply({
-				content: `Test command; Data\n${y}}`,
-			}).catch(console.error);
+			var parts = y.match(/[\s\S]{1,2000}/g) || [];
+			for (let i = 0; i < parts.length; i++) {
+				interaction.reply({
+					content: `${parts[i]}`
+				}).catch(console.error);
+			}
 		}
 		async function createButtonBuilder(interactionembed) {
 			const start_bldisplay_actionrowbuilder =
