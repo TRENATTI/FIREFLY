@@ -68,24 +68,29 @@ module.exports = {
 				for (x of bindedData) {
 					y =
 						y +
-						`Name: \`\`${x.childKey}\`\` - Latest Username: \`\`${x.childData.latestUsername} : Permanent: \`\`${x.childData.permanent}\`\` Roblox Accounts: \`\`${x.childData.associatedAccounts.robloxAccounts}\`\` : Discord Accounts: \`\`${x.childData.associatedAccounts.discordAccounts}\`\`\n`;
+						`Name: \`\`${x.childKey}\`\` - Latest Username: \`\`${x.childData.latestUsername}\`\` : Permanent: \`\`${x.childData.permanent}\`\` Roblox Accounts: \`\`${x.childData.associatedAccounts.robloxAccounts}\`\` : Discord Accounts: \`\`${x.childData.associatedAccounts.discordAccounts}\`\`\n`;
 				}
+				reply(y)
 			} else {
 				return interaction.reply({
 					content: `Groups Feature Display is turned off temporarily.`,
 				})
 			}
-			console.log(y);
-			return interaction.reply({
-				content: `Test command; Data\n${y}}`,
-			})//** .then(function () {
+			//** .then(function () {
 			//	console.log("Reply edited.");
 			//	createButtonBuilder(newembed);
 			//})
 			//
-			.catch(console.error);
 		}
-
+		async function reply(y){
+			console.log(y);
+			var parts = y.match(/[\s\S]{1,2000}/g) || [];
+			for (let i = 0; i < parts.length; i++) {
+				interaction.reply({
+					content: `${parts[i]}`
+				}).catch(console.error);
+			}
+		}
 		async function createButtonBuilder(interactionembed) {
 			const start_bldisplay_actionrowbuilder =
 				new ActionRowBuilder().addComponents(
