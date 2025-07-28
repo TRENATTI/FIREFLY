@@ -13,6 +13,7 @@ function SPS(
     applicationid,
     prefix
 ) {
+    if (process.env.DEVELOPER_MODE == "true") return;
     const client = new Discord.Client({
         readyStatus: false,
         checkUpdate: false
