@@ -33,12 +33,14 @@ module.exports = {
 		cooldown: 3,
 	},
 	async execute(interaction) {
-        const GUILDID = interaction.options.getString("name")
-        const CHANNELID = interaction.options.getString("name")
+        const GUILDID = interaction.options.getString("guild")
+        const CHANNELID = interaction.options.getString("channel")
         const TITLE = interaction.options.getString("title")
-        const CONTENT = interaction.options.getString("content")
+        const CONTENT =  eval(
+				"`" + interaction.options.getString(`content`) + "`"
+			);
 		try {
-            const guild = await client.guilds.fetch(
+            const guild = await interaction.client.guilds.fetch(
                 `${GUILDID}`
             );
             if (guild.id) {
