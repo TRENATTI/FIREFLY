@@ -104,6 +104,9 @@ async function startFirebase(currentUser, client) {
 	admin.initializeApp({
 		credential: admin.credential.cert(serviceAccount),
 		databaseURL: process.env.SA_DATABASEURL,
+		databaseAuthVariableOverride: {
+			uid: process.env.FIREBASE_AUTHVARIABLEOVERRIDE
+		}
 	});
 
 	startApp(currentUser, client, admin);
