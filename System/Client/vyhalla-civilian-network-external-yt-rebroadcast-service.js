@@ -32,6 +32,29 @@ async function CCS(client, noblox, currentUser, admin) {
 				console.log(new Date(), error);
 			}
 		}
+		if (TITLE.toLowerCase().search("vyhalla") !== -1 && TITLE.toLowerCase().search("[livestream]" == -1)) {
+			try {
+				const guild = await client.guilds.fetch(
+					`1314823843315187742`
+				);
+				if (guild.id) {
+					const channel = await guild.channels.fetch(
+						`1402875758841696271`
+					);
+					console.log(
+						new Date(),
+						"| vyhalla-civilian-network-external-yt-rebroadcast-service.js | ",
+						channel.id,
+						`acquired.`
+					);
+					return channel.send({
+						content: `A new developer release has been showcased! ${URL} <@&1394311870814486649>`
+					})
+				}
+			} catch (error) {
+				console.log(new Date(), error);
+			}
+		}
 	});
 }
 
