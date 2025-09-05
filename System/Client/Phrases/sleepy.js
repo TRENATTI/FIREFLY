@@ -4,7 +4,8 @@ module.exports = {
 	wildcard: true,
 	nocooldown: true,
 	execute(message) {
-		const imagelist = ["https://imgur.com/DSKJWWl",
+		const imagelist = [
+			"https://imgur.com/DSKJWWl",
 			"https://imgur.com/yfhELBJ",
 			"https://imgur.com/iSkZE1O",
 			"https://imgur.com/VOyMgWi",
