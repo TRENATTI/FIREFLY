@@ -15,8 +15,9 @@ module.exports = {
 			"https://imgur.com/0H0DQvg",
 			"https://imgur.com/mBjp5kS",
 			"https://imgur.com/4JARohg",
-			"https://imgur.com/FldO8GG"
-			
+			"https://imgur.com/FldO8GG",
+			"https://imgur.com/zYGwmg9",
+			"https://imgur.com/PQ9m5HK"
 		]
 	    const imagenumber = Math.floor(Math.random() * imagelist.length)
         return message.channel.send(imagelist[imagenumber]);
