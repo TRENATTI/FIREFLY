@@ -31,7 +31,7 @@ module.exports = {
 					`Sorry ${message.author}, but only the owners can run that command!`
 				)
 				.then((message) =>
-					message.delete({ timeout: 5000, reason: "delete" })
+					setTimeout(() => message.delete(), 10_000)
 				);
 		}
 
@@ -142,10 +142,11 @@ module.exports = {
 				});
 
 			message.reply({ embeds: [embed_startwork] }).then((message) =>
-				message.delete({
-					timeout: userArray.length * 1000 + 1000,
-					reason: "delete working message",
-				})
+				setTimeout(() => message.delete(), 10_000)
+				//message.delete({
+				//	timeout: userArray.length * 1000 + 1000,
+				//	reason: "delete working message",
+				//})
 			);
 
 			// all roles
