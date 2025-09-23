@@ -88,7 +88,7 @@ module.exports = {
 					content: `Sorry ${message.author}, but only the owners can run that command!`,
 				})
 				.then((message) =>
-					message.delete({ timeout: 5000, reason: "delete" })
+					setTimeout(() => message.delete(), 10_000)
 				);
 		}
 	},

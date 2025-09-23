@@ -41,7 +41,7 @@ module.exports = {
 					ephemeral: true,
 				})
 				.then((message) =>
-					message.delete({ timeout: 5000, reason: "delete" })
+					setTimeout(() => message.delete(), 10_000)
 				);
 		}
 
