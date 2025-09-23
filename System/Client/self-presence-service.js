@@ -21,7 +21,7 @@ function SPS(
     function formatTime() { 
         const date = new Date();
         const options = {
-            timeZone: 'EST', 
+            timeZone: "America/New_York",
             hour12: true,
             hour: 'numeric',
             minute: 'numeric'
