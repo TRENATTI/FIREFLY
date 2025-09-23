@@ -33,24 +33,43 @@ module.exports = {
 		cooldown: 3,
 	},
 	async execute(interaction) {
-        const GUILDID = interaction.options.getString("guild")
-        const CHANNELID = interaction.options.getString("channel")
-        const TITLE = interaction.options.getString("title")
-        const CONTENT =  eval(
-				"`" + interaction.options.getString(`content`) + "`"
-			);
-		try {
-            const guild = await interaction.client.guilds.fetch(
-                `${GUILDID}`
-            );
-            if (guild.id) {
-                const channel = await guild.channels.fetch(
-                    `${CHANNELID}`
-                );
-                channel.threads.create({ name: `${TITLE}`, message: { content: `${CONTENT}` }, appliedTags: [] });
-            }
-        } catch (error) {
-            console.log(error)
-        }
+        async function isAuthorized() {
+			const GUILDID = interaction.options.getString("guild")
+			const CHANNELID = interaction.options.getString("channel")
+			const TITLE = interaction.options.getString("title")
+			const CONTENT =  eval(
+					"`" + interaction.options.getString(`content`) + "`"
+				);
+			try {
+				const guild = await interaction.client.guilds.fetch(
+					`${GUILDID}`
+				);
+				if (guild.id) {
+					const channel = await guild.channels.fetch(
+						`${CHANNELID}`
+					);
+					channel.threads.create({ name: `${TITLE}`, message: { content: `${CONTENT}` }, appliedTags: [] });
+				}
+			} catch (error) {
+				console.log(error)
+			}
+		}
+
+		if (
+			interaction.user.id == "170639211182030850" ||
+			interaction.user.id == "463516784578789376" ||
+			interaction.user.id == "206090047462703104" ||
+			interaction.user.id == "1154775391597240391"
+		) {
+			isAuthorized();
+		} else {
+			return interaction
+				.reply({
+					content: `Sorry ${message.author}, but only the owners can run that command!`,
+				})
+				.then((message) =>
+					message.delete({ timeout: 5000, reason: "delete" })
+				);
+		}
 	},
 };
