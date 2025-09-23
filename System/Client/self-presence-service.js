@@ -42,11 +42,11 @@ function SPS(
             .setDetails(`to the stars...`)
             .setStartTimestamp(Date.now())
             .setAssetsLargeImage('https://cdn.discordapp.com/avatars/809207462997000194/a_e024f84f5fb5afdf0ca6d4239b8fa983.gif') //You can put links in tenor or discord and etc.
-        //.setAssetsLargeText('Large Text') //Text when you hover the Large image
-        //.setAssetsSmallImage('Small Image URL') //You can put links in tenor or discord and etc.
-        //.setAssetsSmallText('Small Text') //Text when you hover the Small image
-        //.addButton('Discord', 'Button URL')
-        //.addButton('Button 2', 'Button URL');
+            //.setAssetsLargeText('Large Text') //Text when you hover the Large image
+            //.setAssetsSmallImage('Small Image URL') //You can put links in tenor or discord and etc.
+            //.setAssetsSmallText('Small Text') //Text when you hover the Small image
+            //.addButton('Discord', 'Button URL')
+            //.addButton('Button 2', 'Button URL');
 
         client.user.setActivity(r);
         client.user.setPresence({ status: "dnd" }); //dnd, online, idle, offline
