@@ -76,8 +76,16 @@ module.exports = {
             const type = interaction.options.getString("type");
             const inputNumberValue = Number(interaction.options.getString("input"))
             const permanentBoolValue = Boolean(interaction.options.getBoolean("permanent"))
-            findLatestUsername(value, type, inputNumberValue, permanentBoolValue)
+            doTypeReasoning(value, type, inputNumberValue, permanentBoolValue)
 
+        }
+
+        async function doTypeReasoning(value, type, inputNumberValue, permanentBoolValue) {
+            if (type == "users") {
+                findLatestUsername(value, type, inputNumberValue, permanentBoolValue)
+            } else if (type == "groups") {
+                
+            }
         }
 
         async function findLatestUsername(value, type, inputNumberValue, permanentBoolValue) {
