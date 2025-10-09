@@ -40,6 +40,11 @@ module.exports = {
                 .setDescription('User ID / Group ID')
                 .setRequired(true)
 		)
+        .addStringOption((option) =>
+            option
+                .setName('rank')
+                .setDescription('Optional rank id of the Group ID to ban over')
+        )
         .addBooleanOption((option) =>
             option
                 .setName('permanent')
@@ -84,7 +89,34 @@ module.exports = {
             if (type == "users") {
                 findLatestUsername(value, type, inputNumberValue, permanentBoolValue)
             } else if (type == "groups") {
-                
+                getRankInGroup(value, type, inputNumberValue, permanentBoolValue)
+            }
+        }
+
+        async function getRankInGroup(value, type, inputNumberValue, permanentBoolValue) {
+            const rank_id = Number(interaction.options.getString("rank")) || Number(1)
+            doInputGroupBlacklist(value, type, inputNumberValue, permanentBoolValue, rank_id)
+        }
+
+        async function  doInputGroupBlacklist(value, type, inputNumberValue, permanentBoolValue, rank_id) {
+            try {
+                if (value == true) {
+                    db.ref(`blacklist/${type}/${type.slice(0, -1)}_${inputNumberValue}`).set({
+                        permanent: permanentBoolValue,
+                        rankId: rank_id,
+                        groupId: inputNumberValue
+                    });
+                    replyToUser(value, type, inputNumberValue)
+                } else {
+                    db.ref(`blacklist/${type}/${type.slice(0, -1)}_${inputNumberValue}`).remove()
+                    replyToUser(value, type, inputNumberValue)
+                }
+            } catch (error) {
+                console.log(new Date(),
+                "| blacklist.js |", error)
+                interaction.reply({
+                    content: `Failed!`,
+                })
             }
         }
 
