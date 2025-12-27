@@ -1,7 +1,7 @@
 module.exports = {
 	name: "onwards",
-	aliases: [],
+	aliases: ["onward"],
 	execute(message) {
-		return message.channel.send("https://tenor.com/view/capybara-crocodile-alligator-riding-on-the-way-gif-27496959");
+		return message.channel.send("https://tenor.com/view/capybara-wearing-crocs-gif-1831068075687129857");
 	},
 };
