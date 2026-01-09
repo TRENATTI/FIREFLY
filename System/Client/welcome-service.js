@@ -5,9 +5,9 @@ const Discord = require("discord.js");
 function WS(client) {
 	let i = 0;
 	const photos = [
-		"https://cdn.discordapp.com/attachments/809592756946206751/1001874995577892974/welcomegayhaha.gif",
-		"https://cdn.discordapp.com/attachments/809592756946206751/1001874994768379914/welcgay3.gif",
-		"https://cdn.discordapp.com/attachments/809592756946206751/1001874994013421588/welcgay2.gif",
+		"https://media1.tenor.com/m/3dL8H0vVT1AAAAAC/hoshimi-miyabi.gif",
+		"https://media1.tenor.com/m/TKaLVjpWD8IAAAAC/miyabi-hoshimi-miyabi.gif",
+		"https://media1.tenor.com/m/RTB7GEvPy9YAAAAC/miyabi-zenless-zone-zero.gif",
 	];
 
 	client.on("guildMemberAdd", (member) => {
@@ -18,7 +18,7 @@ function WS(client) {
 			color: 13193877,
 			description: `Welcome **${
 				member.user.username
-			}**! We are glad to see you here, Now you are officially part **of the Alapha Universe**\n\nPlease read the #rules and also get some nice roles from #self-roles. **And don't forget to say hi!**`,
+			}**! We are glad to see you here, Now you are officially part of **Space Bubble!**\n\nPlease read the <#1235604861949710366> and also get some nice roles from <#1207290853564088320> and <#1235102286670463027>. **And don't forget to say hi!**`,
 			timestamp: new Date(),
 			author: {
 				name: "",
