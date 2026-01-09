@@ -3,8 +3,7 @@ const fs = require("fs");
 const Discord = require("discord.js");
 
 function WS(client) {
-	let i = 0;
-	const photos = [
+	const imagelist = [
 		"https://c.tenor.com/3dL8H0vVT1AAAAAC/tenor.gif",
 		"https://c.tenor.com/TKaLVjpWD8IAAAAC/tenor.gif",
 		"https://c.tenor.com/VSaRKZVmt0kAAAAC/tenor.gif",
@@ -13,6 +12,7 @@ function WS(client) {
 	client.on("guildMemberAdd", (member) => {
 		if (process.env.DEVELOPER_MODE == "true") return;
 		if (!member.guild.id == 215221157937283075) return;
+		const imagenumber = Math.floor(Math.random() * imagelist.length)
 		embedX = {
 			title: "",
 			color: 13193877,
@@ -24,7 +24,7 @@ function WS(client) {
 				name: "",
 			},
 			image: {
-				url: `${photos[i++ % photos.length]}`,
+				url: `${imagelist[imagenumber]}`,
 			},
 			thumbnail: {
 				url: "",
