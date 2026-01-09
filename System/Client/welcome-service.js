@@ -5,9 +5,9 @@ const Discord = require("discord.js");
 function WS(client) {
 	let i = 0;
 	const photos = [
-		"https://media1.tenor.com/m/3dL8H0vVT1AAAAAC/hoshimi-miyabi.gif",
-		"https://media1.tenor.com/m/TKaLVjpWD8IAAAAC/miyabi-hoshimi-miyabi.gif",
-		"https://media1.tenor.com/m/RTB7GEvPy9YAAAAC/miyabi-zenless-zone-zero.gif",
+		"https://c.tenor.com/3dL8H0vVT1AAAAAC/tenor.gif",
+		"https://c.tenor.com/TKaLVjpWD8IAAAAC/tenor.gif",
+		"https://c.tenor.com/VSaRKZVmt0kAAAAC/tenor.gif",
 	];
 
 	client.on("guildMemberAdd", (member) => {
