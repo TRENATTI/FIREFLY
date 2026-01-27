@@ -6,9 +6,7 @@ const cooldown = new Set();
 const cooldownTime = 60000*2
 
 //
-
-const moduleSystem = "./System/Client/Phrases";
-
+const moduleSystem = "../../client/command-services/phrases";
 
 
 //
