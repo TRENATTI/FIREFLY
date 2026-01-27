@@ -4,18 +4,13 @@ const { Collection } = require("discord.js");
 const env = require("dotenv");
 //
 
-const moduleSystem = "./System/Client/Modules";
-const moduleNobloxSystem = "./System/Client/Noblox_Modules";
+const moduleSystem = "../../client/command-services/messages";
 
 //
 
 const moduleFiles = fs
 	.readdirSync(moduleSystem)
 	.filter((file) => file.endsWith(".js"));
-const moduleNobloxFiles = fs
-	.readdirSync(moduleNobloxSystem)
-	.filter((file) => file.endsWith(".js"));
-
 //
 
 function MCS(client, noblox, currentUser, admin, token, applicationid, prefix) {
@@ -53,44 +48,23 @@ function MCS(client, noblox, currentUser, admin, token, applicationid, prefix) {
 			return message.channel.send(reply);
 		}
 
-		if (command.noblox) {
-			try {
-				command.execute(message, args, client, noblox, admin);
-				console.log(
-					new Date(),
-					"| commmands.js |",
-					`${message.author.tag} [${message.author.id}] successfully ran an message command! (${commandName})`
-				);
-			} catch (error) {
-				//message.reply(
-				//	"There was an error while executing this command!"
-				//);
-				console.log(
-					new Date(),
-					"| commmands.js |",
-					`${message.author.tag} [${message.author.id}] failed to run an message command! (${commandName})\nError:`,
-					error
-				);
-			}
-		} else {
-			try {
-				command.execute(message, args, client);
-				console.log(
-					new Date(),
-					"| commmands.js |",
-					`${message.author.tag} [${message.author.id}] successfully ran an message command! (${commandName})`
-				);
-			} catch (error) {
-				//message.reply(
-				//	"There was an error while executing this command!"
-				//);
-				console.log(
-					new Date(),
-					"| commmands.js |",
-					`${message.author.tag} [${message.author.id}] failed to run an message command! (${commandName})\nError:`,
-					error
-				);
-			}
+		try {
+			command.execute(message, args, client, noblox, admin);
+			console.log(
+				new Date(),
+				"| commmands.js |",
+				`${message.author.tag} [${message.author.id}] successfully ran an message command! (${commandName})`
+			);
+		} catch (error) {
+			//message.reply(
+			//	"There was an error while executing this command!"
+			//);
+			console.log(
+				new Date(),
+				"| commmands.js |",
+				`${message.author.tag} [${message.author.id}] failed to run an message command! (${commandName})\nError:`,
+				error
+			);
 		}
 	});
 }
