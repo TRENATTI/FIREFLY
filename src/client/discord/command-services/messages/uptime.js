@@ -1,7 +1,7 @@
 module.exports = {
 	name: "uptime",
 	description: "Uptime.",
-	execute(message, args) {
+	execute(message, args, client, noblox, admin) {
 		uptime = message.client.uptime;
 		days = Math.floor(uptime / 86400000);
 		hours = Math.floor((uptime / 3600000) % 24);
