@@ -2,7 +2,7 @@ module.exports = {
 	name: "sn",
 	description: "Says news in Embed",
 	aliases: ["sn"],
-	execute(message, args) {
+	execute(message, args, client, noblox, admin) {
 		stringargs = message.content.slice(process.env.PREFIX.length + 3);
 		const embedAA = {
 			author: {
