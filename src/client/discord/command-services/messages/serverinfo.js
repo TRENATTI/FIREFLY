@@ -1,8 +1,8 @@
 module.exports = {
-	name: "server",
+	name: "serverinfo",
 	description: "Server info.",
-	aliases: ["serverinfo"],
-	execute(message, args) {
+	aliases: ["server"],
+	execute(message, args, client, noblox, admin) {
 		return message.reply(
 			`Server name: ${message.guild.name}\nTotal members: ${message.guild.memberCount}`
 		);
