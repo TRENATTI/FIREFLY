@@ -2,7 +2,7 @@ module.exports = {
 	name: "userinfo",
 	description: "Userinfo..",
 	aliases: ["user", "whois"],
-	execute(message, args) {
+	execute(message, args, client, noblox, admin) {
 		const embedAA = {
 			author: {
 				name: message.client.user.username,
