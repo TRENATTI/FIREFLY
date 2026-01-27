@@ -7,7 +7,7 @@ module.exports = {
 	aliases: ["commands", "cmds"],
 	usage: "[command name]",
 	cooldown: 5,
-	execute(message, args, client) {
+	execute(message, args, client, noblox, admin) {
 		const data = [];
 		const commands = client.commands_v12;
 
