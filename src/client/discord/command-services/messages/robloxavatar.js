@@ -4,7 +4,7 @@ module.exports = {
     name: 'robloxavatar',
     description: 'Avatar.',
     aliases: ['rav'],
-    execute(message, args) {
+    execute(message, args, client, noblox, admin) {
         console.log(args[1], args[0])
 
         var usernameParam = {
