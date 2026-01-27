@@ -8,7 +8,7 @@ module.exports = {
 			`\`\`${user.tag}\`\`'s avatar: ${user.displayAvatarURL({
 				format: "png",
 				dynamic: true,
-			})}?size=1024`
+			})}?size=4096`
 		);
 	},
 };
