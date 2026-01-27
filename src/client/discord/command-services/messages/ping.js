@@ -1,7 +1,7 @@
 module.exports = {
 	name: "ping",
 	description: "Ping.",
-	execute(message, args) {
+	execute(message, args, client, noblox, admin) {
 		const time = new Date();
 		const embedAA = {
 			author: {
