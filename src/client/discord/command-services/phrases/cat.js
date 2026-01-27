@@ -1,6 +1,7 @@
 module.exports = {
 	name: "cat",
 	aliases: ["pussy"],
+	wildcard: false,
 	nocooldown: true,
 	execute(message) {
 		return message.channel.send(
