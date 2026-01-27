@@ -1,6 +1,7 @@
 module.exports = {
 	name: "try asking again.",
 	aliases: [],
+	wildcard: false,
 	execute(message) {
 		return message.channel.send({
 			files: [
