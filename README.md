@@ -18,18 +18,14 @@ Multi-purpose bot, designed for entertainmentl utility, and moderation purposes.
 
 ---------------
 
-## ℹ️ About:
+## ℹ️ About
 
 This repository is dedicated to the development of Trenati's Official Discord bot called FIREFLY (Codenamed for *Flying Lighthouse*). Custom tailored for our needs.
 
----------------
-
-## ⚙️ Prerequisites:
+## ⚙️ Prerequisites
 - <a href="https://nodejs.org/en/download">Node.js</a>
 
----------------
-
-## 🖥️ Getting started:
+## 🖥️ Getting started
 
 ```bash 
 git clone https://github.com/TRENATTI/FIREFLY.git
