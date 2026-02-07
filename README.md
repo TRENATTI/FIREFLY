@@ -16,8 +16,6 @@ Multi-purpose bot, designed for entertainmentl utility, and moderation purposes.
 <a href="#getting-started">Getting started</a>
 </div>
 
----------------
-
 ## ℹ️ About
 
 This repository is dedicated to the development of Trenati's Official Discord bot called FIREFLY (Codenamed for *Flying Lighthouse*). Custom tailored for our needs.
