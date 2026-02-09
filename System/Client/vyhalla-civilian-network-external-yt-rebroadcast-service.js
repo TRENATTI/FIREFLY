@@ -9,7 +9,7 @@ async function CCS(client, noblox, currentUser, admin) {
 		const ARGS = message.content.split("&&")
 		const URL = ARGS[0]
 		const TITLE = ARGS[1]
-		if (TITLE.toLowerCase().search("vyhalla") !== -1 && TITLE.toLowerCase().search("[livestream]" !== -1)) {
+		if (TITLE.toLowerCase().search("vyhalla") !== -1 && TITLE.toLowerCase().search("[livestream" !== -1)) {
 			try {
 				const guild = await client.guilds.fetch(
 					`1314823843315187742`
@@ -32,7 +32,7 @@ async function CCS(client, noblox, currentUser, admin) {
 				console.log(new Date(), error);
 			}
 		}
-		if (TITLE.toLowerCase().search("vyhalla") !== -1 && TITLE.toLowerCase().search("[livestream]" == -1)) {
+		if (TITLE.toLowerCase().search("vyhalla") !== -1 && TITLE.toLowerCase().search("[livestream" == -1)) {
 			try {
 				const guild = await client.guilds.fetch(
 					`1314823843315187742`
