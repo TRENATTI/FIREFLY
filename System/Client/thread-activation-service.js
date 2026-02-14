@@ -25,7 +25,9 @@ async function TAS(
 
             "1421059005358542879", // External Announcements TRENATI :: Global Broadcasts
             "1421059300809379901", // External Announcements THE MEMORIES PROJECT :: Art Archive
-
+            
+                                   // The Peace Summit
+            "1421059784001454200", // External Announcements TRENATI :: Global Broadcasts
         ];
 
             try {
