@@ -54,8 +54,8 @@ async function TAS(
             }
         }
 
-        // Check every minute
-        setInterval(keepThreadActive, 60 * 1000);
+        // Check every 30 minutes
+        setInterval(keepThreadActive, (60 * 30) * 1000);
     });
 }
 
