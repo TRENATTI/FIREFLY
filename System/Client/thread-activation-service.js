@@ -1,5 +1,6 @@
 require("dotenv").config();
 const { ComponentType } = require("discord.js");
+const { resourceUsage } = require("process");
 
 async function TAS(
     client,
@@ -11,32 +12,38 @@ async function TAS(
     prefix
 ) {
     client.once("ready", async () => {
-        //if (process.env.DEVELOPER_MODE == "true" || process.env.DATABASE_MODE == "true") return;
+        if (process.env.DEVELOPER_MODE == "true" || process.env.DATABASE_MODE == "true") return;
 
-        async function keepThreadActive() {
+       async function keepThreadActive() {
+            const now = new Date();
+            const isDivisible = now.getDate() % 3 === 0;
+            const isFirstHour = now.getHours() === 0;
+
+            if (!isDivisible || !isFirstHour) return;
+
             const channels = [
-                                    // Vyhalla
-            "1402875758841696271",  // Community Feeds TRENATI :: Development Livestreams
-            "1403058887845875752",  // Community Feeds MINAC :: State Sponsored & Internal Publications
-            "1402875273808183396",  // Community Feeds TRENATI :: Development Video Releases
-                                    
-            "1402900035758329887",  // Community News ORGNEWS :: Organization Transparency
-            "1402897862953795597",  // Community News ORGNEWS :: Organization Applications
+                                        // Vyhalla
+                "1402875758841696271",  // Community Feeds TRENATI :: Development Livestreams
+                "1403058887845875752",  // Community Feeds MINAC :: State Sponsored & Internal Publications
+                "1402875273808183396",  // Community Feeds TRENATI :: Development Video Releases
+                                        
+                "1402900035758329887",  // Community News ORGNEWS :: Organization Transparency
+                "1402897862953795597",  // Community News ORGNEWS :: Organization Applications
 
-            "1421059005358542879", // External Announcements TRENATI :: Global Broadcasts
-            "1421059300809379901", // External Announcements THE MEMORIES PROJECT :: Art Archive
-            
-                                   // The Peace Summit
-            "1421059784001454200", // External Announcements TRENATI :: Global Broadcasts
-        ];
+                "1421059005358542879",  // External Announcements TRENATI :: Global Broadcasts
+                "1421059300809379901",  // External Announcements THE MEMORIES PROJECT :: Art Archive
+                
+                                        // The Peace Summit
+                "1421059784001454200",  // External Announcements TRENATI :: Global Broadcasts
+            ];
 
             try {
-                for (const key in channels) {
-                     const channelId = channels[key];
+                for (const channelId of channels) {
                     const channel = await client.channels.fetch(channelId);
                     console.log(`Fetched channel: ${channel.name}`);
+
                     const msg = await channel.send({
-                        content: "-# This message is sent to keep this thread active for the general public to see. It will delete momentarily."
+                        content: "-# This message keeps this thread active. It will delete momentarily."
                     });
 
                     await new Promise(res => setTimeout(res, 5000));
@@ -45,10 +52,10 @@ async function TAS(
             } catch (error) {
                 console.error(error);
             }
-        };
+        }
 
-        keepThreadActive();
-        setTimeout(keepThreadActive, 259200 * 1000);
+        // Check every minute
+        setInterval(keepThreadActive, 60 * 1000);
     });
 }
 
