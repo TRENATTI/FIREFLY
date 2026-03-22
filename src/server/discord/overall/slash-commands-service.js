@@ -29,9 +29,13 @@ function commands(
 	for (const file of moduleFiles) {
 
 		try {
-			const commandFile = require(`../../client/discord/command-services/slashes/${file}`);
+			const commandFile = require(`../../../client/discord/command-services/slashes/${file}`);
 			commands.push(commandFile.data.toJSON());
 			client.v14_commands.set(commandFile.data.name, commandFile);
+			console.log(new Date(),
+				"| slashes.js |",
+				`Loaded: ./src/client/discord/command-services/slashes/${file}`
+			)
 		} catch (err) {
 			console.log(new Date(), "| V14_commmands.js", err);
 		}
@@ -43,7 +47,7 @@ function commands(
 		try {
 			console.log(
 				new Date(),
-				`| V14_commands.js | Started refreshing ${commands.length} application (/) commands.`
+				`| slashes.js | Started refreshing ${commands.length} application (/) commands.`
 			);
 
 			const data = await rest.put(
@@ -53,7 +57,7 @@ function commands(
 
 			console.log(
 				new Date(),
-				`| V14_commands.js | Successfully reloaded ${data.length} application (/) commands.`
+				`| slashes.js | Successfully reloaded ${data.length} application (/) commands.`
 			);
 		} catch (error) {
 			console.error(new Date(), `| commands.js |`, error);
@@ -70,13 +74,13 @@ function commands(
 				await command.execute(interaction, noblox, admin);
 				console.log(
 					new Date(),
-					"| V14_commmands.js |",
+					"| slashes.js |",
 					`${interaction.user.username} [${interaction.user.id}] successfully ran an interaction! (${interaction.commandName})`
 				);
 			} catch (error) {
 				console.log(
 					new Date(),
-					"| V14_commmands.js |",
+					"| slashes.js |",
 					`${interaction.user.username} [${interaction.user.id}] failed to run an interaction! (${interaction.commandName})\nError:`,
 					error
 				);
