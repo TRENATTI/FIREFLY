@@ -1,5 +1,5 @@
 const Discord = require('discord.js-selfbot-v13');
-const keepAlive = require('../../client/discord/deploy/keepAlive-sps.js');
+const keepAlive = require('../../../client/discord/deploy/keepAlive-sps.js');
 
 require("dotenv").config();
 

@@ -21,8 +21,12 @@ function commands(client) {
 	if (process.env.DEVELOPER_MODE == "true") return;
 	client.phrases_v12 = new Collection();
 	for (const file of moduleFiles) {
-		const phraseFile = require(`../../client/discord/command-services/phrases/${file}`);
+		const phraseFile = require(`../../../client/discord/command-services/phrases/${file}`);
 		client.phrases_v12.set(phraseFile.name, phraseFile);
+		console.log(new Date(),
+				"| phrases.js |",
+				`Loaded: ./src/client/discord/command-services/phrases/${file}`
+			)
 	}
 	client.on("messageCreate", (message) => {
 		if (message.author.bot) return;
