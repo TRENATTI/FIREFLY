@@ -6,7 +6,7 @@ const cooldown = new Set();
 const cooldownTime = 60000*2
 
 //
-const moduleSystem = "../../client/command-services/phrases";
+const moduleSystem = "./src/client/discord/command-services/phrases";
 
 
 //
@@ -21,7 +21,7 @@ function commands(client) {
 	if (process.env.DEVELOPER_MODE == "true") return;
 	client.phrases_v12 = new Collection();
 	for (const file of moduleFiles) {
-		const phraseFile = require("./Phrases/" + file);
+		const phraseFile = require(`../../client/discord/command-services/phrases/${file}`);
 		client.phrases_v12.set(phraseFile.name, phraseFile);
 	}
 	client.on("messageCreate", (message) => {
