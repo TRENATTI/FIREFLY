@@ -11,6 +11,9 @@
 
 require("dotenv").config();
 const fs = require("fs");
+const path = require("node:path")
+const { pathToFileURL }  = require("node:url")
+
 const { Client, GatewayIntentBits } = require("discord.js");
 const noblox = require("noblox.js");
 const admin = require("firebase-admin");
@@ -53,34 +56,51 @@ const rbxcookie = getKeys("rbxcookie");
 
 //
 
+
+
+
+// Start loading from the desired folder
+
+
+
 function startApp(currentUser, client, admin) {
-	const clientFiles = fs
-		.readdirSync(clientSystem)
-		.filter((file) => file.endsWith(".js"));
+	async function loadModulesRecursively(directory) {
+		// Read directory contents
+		const files = fs.readdirSync(directory, { withFileTypes: true });
 
-	for (const file of clientFiles) {
-		const clientFile = require(`./System/Client/${file}`);
-		clientFile(
-			client,
-			noblox,
-			currentUser,
-			admin,
-			token,
-			applicationid,
-			prefix
-		);
-	};
+		for (const file of files) {
+			const filePath = path.join(directory, file.name);
 
-	const serverFiles = fs
-		.readdirSync(serverSystem)
-		.filter((file) => file.endsWith(".js"));
-
-	for (const file of serverFiles) {
-		//const serverFile = require(`./System/Server/${file}`);
-		//serverFile();
-	};
-	const server = require(`./System/Server/server.js`)
-	server();
+			if (file.isDirectory()) {
+			// Recurse into subdirectories
+			await loadModulesRecursively(filePath);
+			} else if (file.name.endsWith('.js')) {
+			// Dynamically load JS file
+			const relativeRequirePath = filePath.replace(/\\/g, '/');
+			try {
+				const module = require(`./${relativeRequirePath}`)
+				module(
+					client,
+					noblox,
+					currentUser,
+					admin,
+					token,
+					applicationid,
+					prefix)
+				console.log(new Date(),
+				"| index.js |",
+				`Loaded: ${relativeRequirePath}`);
+				// Optional: call a default function from the module
+				// module.default(); 
+			} catch (err) {
+				console.error(new Date(),
+				"| index.js |",`Error loading ${relativeRequirePath}:`, err);
+			}
+			}
+		}
+	}
+	
+	loadModulesRecursively('src/server');
 }
 
 //

@@ -4,7 +4,7 @@ const { Collection } = require("discord.js");
 const env = require("dotenv");
 //
 
-const moduleSystem = "../../client/command-services/messages";
+const moduleSystem = "./src/client/discord/command-services/messages";
 
 //
 
@@ -16,11 +16,7 @@ const moduleFiles = fs
 function MCS(client, noblox, currentUser, admin, token, applicationid, prefix) {
 	client.commands_v12 = new Collection();
 	for (const file of moduleFiles) {
-		const commandFile = require("./Modules/" + file);
-		client.commands_v12.set(commandFile.name, commandFile);
-	}
-	for (const file of moduleNobloxFiles) {
-		const commandFile = require("./Noblox_Modules/" + file);
+		const commandFile = require(`../../client/discord/command-services/messages/${file}`);
 		client.commands_v12.set(commandFile.name, commandFile);
 	}
 	client.on("messageCreate", (message) => {

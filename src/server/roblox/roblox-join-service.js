@@ -2,7 +2,7 @@ require("dotenv").config();
 const fs = require("fs");
 const Discord = require("discord.js");
 const axios = require("axios")
-const DB = require('../DB/group-blacklist.json')
+const DB = require('../../client/roblox/db/rbx-blacklist_groups_backup.json')
 
 async function RJS(client,
 	noblox,
