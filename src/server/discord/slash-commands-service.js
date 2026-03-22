@@ -2,19 +2,16 @@ const fs = require("fs");
 require("dotenv").config();
 
 const { Collection } = require("discord.js");
-const { REST } = require("@discordjs/rest"); // -- Discord V14
-const { Routes } = require("discord.js"); // -- Discord V14
+const { REST } = require("@discordjs/rest"); 
+const { Routes } = require("discord.js"); 
 
-const moduleSystem = "./System/Client/V14_Modules"; // -- Discord.js V14
-const moduleNobloxSystem = "./System/Client/V14_Noblox_Modules"; // -- Discord.js V14
+const moduleSystem = "./src/client/discord/command-services/slashes";
+
 //
 
 const moduleFiles = fs
 	.readdirSync(moduleSystem)
-	.filter((file) => file.endsWith(".js")); // -- Discord.js V14
-const moduleNobloxFiles = fs
-	.readdirSync(moduleNobloxSystem)
-	.filter((file) => file.endsWith(".js")); // -- Discord.js V14
+	.filter((file) => file.endsWith(".js")); 
 
 //
 
@@ -27,30 +24,19 @@ function commands(
 	applicationid,
 	prefix
 ) {
-	client.v14_commands = new Collection(); //-- Discord.js V14
+	client.v14_commands = new Collection(); 
 	const commands = [];
 	for (const file of moduleFiles) {
 
 		try {
-			const commandFile = require(`./V14_Modules/${file}`);
+			const commandFile = require(`../../client/discord/command-services/slashes/${file}`);
 			commands.push(commandFile.data.toJSON());
 			client.v14_commands.set(commandFile.data.name, commandFile);
 		} catch (err) {
 			console.log(new Date(), "| V14_commmands.js", err);
 		}
 	}
-	for (const file of moduleNobloxFiles) {
-
-		try {
-			const commandFile = require(`./V14_Noblox_Modules/${file}`);
-			commands.push(commandFile.data.toJSON());
-			client.v14_commands.set(commandFile.data.name, commandFile);
-		} catch (err) {
-			console.log(new Date(), "| V14_commmands.js", err);
-		}
-
 	
-	}
 	const rest = new REST({ version: "10" }).setToken(token);
 
 	(async () => {
