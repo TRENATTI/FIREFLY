@@ -5,6 +5,7 @@ const {
 require("dotenv").config();
 
 const noblox = require("noblox.js");
+
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
@@ -20,10 +21,12 @@ const PLACE_IDS = [
   { ID: 78813780405984, Active: false, Name: "Ziost" },
 ];
 
-// ---------- Roblox Helpers ----------
+// ---------- HELPERS ----------
 
 async function getUniverseId(placeId) {
-  const res = await fetch(`https://apis.roblox.com/universes/v1/places/${placeId}/universe`);
+  const res = await fetch(
+    `https://apis.roblox.com/universes/v1/places/${placeId}/universe`
+  );
   const json = await res.json();
   return json.universeId;
 }
@@ -44,7 +47,7 @@ async function getGameIcon(universeId) {
   return json.data?.[0]?.imageUrl || null;
 }
 
-// ---------- Server Data ----------
+// ---------- SERVER DATA WITH 429 REPORTING ----------
 
 async function getServerData(placeIds) {
   const results = [];
@@ -55,15 +58,60 @@ async function getServerData(placeIds) {
     let cursor = null;
     let serverCount = 0;
     let playerCount = 0;
+    let failed = false;
 
     try {
       do {
-        const res = await fetch(
-          `https://games.roblox.com/v1/games/${place.ID}/servers/Public?sortOrder=Asc&limit=100${cursor ? `&cursor=${cursor}` : ""}`
-        );
+        let res;
+        let retryCount = 0;
+
+        while (true) {
+          try {
+            res = await fetch(
+              `https://games.roblox.com/v1/games/${place.ID}/servers/Public?sortOrder=Asc&limit=100${cursor ? `&cursor=${cursor}` : ""}`
+            );
+
+            // ---- RATE LIMIT HANDLING ----
+            if (res.status === 429) {
+              retryCount++;
+
+              const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+              console.log(`429 on ${place.Name}, retrying in ${delay}ms...`);
+
+              // after 3 failed retries, give up cleanly
+              if (retryCount >= 3) {
+                console.log(`Aborting ${place.Name} due to persistent 429`);
+                failed = true;
+                break;
+              }
+
+              await new Promise(r => setTimeout(r, delay));
+              continue;
+            }
+
+            if (!res.ok) {
+              console.log(`HTTP ${res.status} for ${place.Name}`);
+              failed = true;
+              break;
+            }
+
+            break;
+
+          } catch (err) {
+            console.log(`Fetch error for ${place.Name}`, err);
+            failed = true;
+            break;
+          }
+        }
+
+        if (failed || !res) break;
+
         const json = await res.json();
 
-        if (!json.data) break;
+        if (!json?.data) {
+          failed = true;
+          break;
+        }
 
         serverCount += json.data.length;
 
@@ -72,23 +120,32 @@ async function getServerData(placeIds) {
         }
 
         cursor = json.nextPageCursor;
-      } while (cursor);
+
+      } while (cursor && !failed);
 
       results.push({
         name: place.Name,
-        servers: serverCount,
-        players: playerCount,
+        servers: failed ? null : serverCount,
+        players: failed ? null : playerCount,
+        failed
       });
 
     } catch (err) {
       console.error(`Failed for ${place.Name}`, err);
+
+      results.push({
+        name: place.Name,
+        servers: null,
+        players: null,
+        failed: true
+      });
     }
   }
 
   return results;
 }
 
-// ---------- Command ----------
+// ---------- COMMAND ----------
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -101,7 +158,7 @@ module.exports = {
     try {
       await noblox.setCookie(process.env.RBXCOOKIE);
 
-      // Main place for title/image
+      // ---- GAME INFO ----
       const universeId = await getUniverseId(PLACE_IDS[0].ID);
 
       let imageUrl = await getGameThumbnail(PLACE_IDS[0].ID);
@@ -111,21 +168,24 @@ module.exports = {
 
       const gameInfo = await noblox.getUniverseInfo([universeId]);
 
-      // Get server data
+      // ---- SERVER DATA ----
       const serverData = await getServerData(PLACE_IDS);
 
       // ---- FILTER + SORT ----
-      const activePlaces = serverData.filter(p => p.servers > 0);
-      activePlaces.sort((a, b) => b.players - a.players);
+      const activePlaces = serverData
+        .filter(p => p.servers > 0 || p.failed)
+        .sort((a, b) => (b.players || 0) - (a.players || 0));
 
       // ---- TOTAL PLAYERS ----
-      const totalPlayers = serverData.reduce((sum, p) => sum + p.players, 0);
+      const totalPlayers = serverData.reduce((sum, p) => sum + (p.players || 0), 0);
 
-      // ---- BUILD FIELDS ----
+      // ---- EMBED FIELDS ----
       const fields = activePlaces.length > 0
         ? activePlaces.map(place => ({
             name: place.name,
-            value: `🟢 ${place.players} players\n🖥️ ${place.servers} servers`,
+            value: place.failed
+              ? "⚠️ Unable to retrieve data (rate limited)"
+              : `🟢 ${place.players} players\n🖥️ ${place.servers} servers`,
             inline: true
           }))
         : [{
@@ -137,26 +197,27 @@ module.exports = {
       // ---- EMBED ----
       const embed = new EmbedBuilder()
         .setTitle(gameInfo[0].name)
-        .setDescription(`👥 Total Players: **${totalPlayers}**`)
+        .setDescription(
+          `👥 Total Players: **${totalPlayers}**` +
+          (serverData.some(p => p.failed) ? "\n⚠️ Some data was rate limited by Roblox." : "")
+        )
         .setImage(imageUrl)
         .addFields(fields)
         .setColor("DarkGreen")
         .setFooter({
-            text: interaction.guild.name,
-            iconURL: interaction.guild.iconURL({
+          text: interaction.guild?.name || "Unknown Server",
+          iconURL: interaction.guild?.iconURL({
             extension: "png",
             size: 256
-            }),
+          }) || null,
         })
         .setTimestamp();
-
-    
 
       await interaction.editReply({ embeds: [embed] });
 
     } catch (err) {
       console.error(err);
-      await interaction.editReply("⚠️ Failed to fetch HQ stats.");
+      await interaction.editReply("⚠️ Failed to fetch stats.");
     }
   },
 };
