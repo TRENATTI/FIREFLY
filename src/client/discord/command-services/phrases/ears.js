@@ -39,7 +39,21 @@ module.exports = {
 			"https://imgur.com/yIZQwM6",
 			"https://imgur.com/vlT2paH",
 			"https://imgur.com/HuXnxwf",
-			"https://imgur.com/Kdzon4L"
+			"https://imgur.com/Kdzon4L",
+			"https://imgur.com/YiyDr4X",
+			"https://imgur.com/NfMiG1f",
+			"https://imgur.com/4Q6mheg",
+			"https://imgur.com/4Q6mheg",
+			"https://imgur.com/stn7fxq",
+			"https://imgur.com/7ptrCjW",
+			"https://imgur.com/bHz1cwz",
+			"https://imgur.com/Z0qOerD",
+			"https://imgur.com/xF4XqIL",
+			"https://imgur.com/M9KHwJC",
+			"https://imgur.com/KdTaqd5",
+			"https://imgur.com/HRY5rYv",
+			"https://imgur.com/3RbclGG",
+			
 		]
 	    const imagenumber = Math.floor(Math.random() * imagelist.length)
         return message.channel.send(imagelist[imagenumber]);
