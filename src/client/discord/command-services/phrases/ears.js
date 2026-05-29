@@ -2,7 +2,8 @@ module.exports = {
 	name: "ears",
 	aliases: ["im all ears","i'm all ears"],
 	wildcard: true,
-	nocooldown: true,
+	nocooldown: false,
+	cooldown_time: 60000,
 	execute(message) {
     	const imagelist = ["https://imgur.com/E5LJhoD", 
 			"https://imgur.com/9GL9m70",
