@@ -18,12 +18,6 @@ module.exports = {
 				.setDescription("Message to add.")
 				.setRequired(true)
 		)
-		.addBooleanOption((option) =>
-			option
-				.setName("mention")
-				.setDescription("Mention everyone.")
-				.setRequired(false)
-		)
 		.addStringOption((option) =>
 			option
 				.setName("genre")
@@ -34,7 +28,13 @@ module.exports = {
 					{ name: "Aurora", value: "aurora" },
 					{ name: "Trenati", value: "trenati" },
 				),
-        ),
+        )
+		.addBooleanOption((option) =>
+			option
+				.setName("mention")
+				.setDescription("Mention everyone.")
+				.setRequired(false)
+		),
 	subdata: {
 		cooldown: 15,
 	},
