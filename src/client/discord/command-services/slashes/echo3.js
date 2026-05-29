@@ -107,10 +107,11 @@ module.exports = {
 			interaction.user.id == "170639211182030850" ||
 			interaction.user.id == "463516784578789376" ||
 			interaction.user.id == "206090047462703104" ||
-			interaction.user.id == "1154775391597240391"
+			interaction.user.id == "1154775391597240391" ||
+			interaction.user.id == "175922772923383808"
 		) {
 			interaction.reply({
-				content: `Starting...`,
+				content: `Announcing...`,
 			});
 			isAuthorized();
 		} else {
