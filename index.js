@@ -10,6 +10,8 @@
 // // //
 
 require("dotenv").config();
+require('events').EventEmitter.defaultMaxListeners = 15;
+
 const fs = require("fs");
 const path = require("node:path")
 const { pathToFileURL }  = require("node:url")
