@@ -2,7 +2,8 @@ module.exports = {
 	name: "ears",
 	aliases: ["im all ears","i'm all ears"],
 	wildcard: true,
-	nocooldown: true,
+	nocooldown: false,
+	cooldown_time: 60000,
 	execute(message) {
     	const imagelist = ["https://imgur.com/E5LJhoD", 
 			"https://imgur.com/9GL9m70",
@@ -73,7 +74,8 @@ module.exports = {
 			"https://imgur.com/616Ssrw",
 			"https://imgur.com/FvnFSJT",
 			"https://imgur.com/ZfSpTLw",
-			"https://imgur.com/vCAC1MA"
+			"https://imgur.com/vCAC1MA",
+			"https://imgur.com/QfETKJ3"
 
 		]
 	    const imagenumber = Math.floor(Math.random() * imagelist.length)

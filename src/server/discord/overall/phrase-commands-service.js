@@ -3,7 +3,7 @@ require("dotenv").config();
 const fs = require("fs");
 const { Collection } = require("discord.js");
 const cooldown = new Set();
-const cooldownTime = 60000*2
+const cooldownTime = 60000
 
 //
 const moduleSystem = "./src/client/discord/command-services/phrases";
