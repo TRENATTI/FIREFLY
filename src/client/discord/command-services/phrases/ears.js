@@ -73,7 +73,8 @@ module.exports = {
 			"https://imgur.com/616Ssrw",
 			"https://imgur.com/FvnFSJT",
 			"https://imgur.com/ZfSpTLw",
-			"https://imgur.com/vCAC1MA"
+			"https://imgur.com/vCAC1MA",
+			"https://imgur.com/QfETKJ3"
 
 		]
 	    const imagenumber = Math.floor(Math.random() * imagelist.length)
