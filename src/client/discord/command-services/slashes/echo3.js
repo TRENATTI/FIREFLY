@@ -92,9 +92,9 @@ module.exports = {
 							guildData[i].childData.channelId
 						);
 						if (mentionValue == true) {
-							channel.send({ content: `${messageValue}\n-# SENT BY: ${interaction.user.username} • FROM: ${interaction.guild.name} || @everyone ||` });
+							channel.send({ content: `${messageValue}\n-# SENT BY: ${interaction.user.username} • FROM: ${interaction.guild.name} • GENRE: ${genreValue} || @everyone ||` });
 						} else {
-							channel.send({ content: `${messageValue}\n-# SENT BY: ${interaction.user.username} • FROM: ${interaction.guild.name}` });
+							channel.send({ content: `${messageValue}\n-# SENT BY: ${interaction.user.username} • FROM: ${interaction.guild.name} • GENRE: ${genreValue} `});
 						}
 
 					} catch (error) {
