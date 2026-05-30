@@ -25,8 +25,8 @@ module.exports = {
 				.setRequired(true)
 				.addChoices(
 					{ name: "The Eternal Conflict", value: "tec" },
-					{ name: "Aurora", value: "aurora" },
-					{ name: "Trenati", value: "trenati" },
+					{ name: "The Aurora", value: "aurora" },
+					{ name: "Global", value: "trenati" },
 				),
         )
 		.addBooleanOption((option) =>
@@ -52,7 +52,9 @@ module.exports = {
 				var ref = db
 					.ref("szeebe")
 					.child("au-world-messages")
-					.child("guilds");
+					.child("genres")
+					.child("trenati")
+					.child("guilds")
 				ref.once("value", (snapshot) => {
 					snapshot.forEach((childSnapshot) => {
 						var childKey = childSnapshot.key;
@@ -68,6 +70,22 @@ module.exports = {
 					.child("au-world-messages")
 					.child("genres")
 					.child("tec")
+					.child("guilds")
+				ref.once("value", (snapshot) => {
+					snapshot.forEach((childSnapshot) => {
+						var childKey = childSnapshot.key;
+						var childData = childSnapshot.val();
+						console.log(childKey, childData);
+						guilddata.push({ childKey, childData });
+					});
+					checkData(guilddata);
+				});
+			} else if (genreValue == "aurora") {
+				var ref = db
+					.ref("szeebe")
+					.child("au-world-messages")
+					.child("genres")
+					.child("aurora")
 					.child("guilds")
 				ref.once("value", (snapshot) => {
 					snapshot.forEach((childSnapshot) => {
