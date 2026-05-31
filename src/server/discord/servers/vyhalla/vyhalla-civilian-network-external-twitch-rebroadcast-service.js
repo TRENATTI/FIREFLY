@@ -24,7 +24,7 @@ async function CCS(client, noblox, currentUser, admin) {
 				const ARGS = message.content.split("&&")
 				const URL = ARGS[0]
 				const TITLE = ARGS[1]
-				if (TITLE.toLowerCase().search("vyhalla")) {
+				if (TITLE.toLowerCase().search("the eternal conflict")) {
 					return channel.send({
 						content: `Trenati is now livestreaming a developer session! ${URL} <@&1402785004060414133>`
 					})
