@@ -18,7 +18,7 @@ function WS(client) {
 			color: 13193877,
 			description: `Welcome **${
 				member.user.username
-			}**! We are glad to see you here, Now you are officially part of **Space Bubble!**\n\nPlease read the <#1235604861949710366> and also get some nice roles from <#1207290853564088320> and <#1235102286670463027>. **And don't forget to say hi!**`,
+			}**! We are glad to see you here, Now you are officially part of **Shiggy Bubble!**\n\nPlease read the <#1235604861949710366> and also get some nice roles from <#1207290853564088320> and <#1235102286670463027>. **And don't forget to say hi!**`,
 			timestamp: new Date(),
 			author: {
 				name: "",
