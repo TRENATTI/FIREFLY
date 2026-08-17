@@ -10,7 +10,7 @@ function PS(
 	applicationid,
 	prefix
 ) {
-	client.once("ready", () => {
+	client.once("clientReady", () => {
 		console.log(
 			new Date(),
 			`| status.js |`, `I'm in! Username: ${client.user.username}. User ID: ${client.user.id}`

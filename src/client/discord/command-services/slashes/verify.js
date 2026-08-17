@@ -290,7 +290,7 @@ module.exports = {
 			await interaction.member.setNickname(finalNickname).catch(() => {});
 
 			// 5. Log action
-			const logChannelIds = ["1517324782964707530", "1517329798643581038", "1517329877978714254", "1517329973629947984", "1517330338630602822" ];
+			const logChannelIds = ["1517324782964707530", "1517329798643581038", "1517329877978714254", "1517329973629947984", "1517330338630602822", "1383901410906734713" ];
 
 			const logEmbed = new EmbedBuilder()
 				.setTitle("A user linked their Roblox account with Firefly")
