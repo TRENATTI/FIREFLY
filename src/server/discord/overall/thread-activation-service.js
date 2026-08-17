@@ -11,7 +11,7 @@ async function TAS(
     applicationid,
     prefix
 ) {
-    client.once("ready", async () => {
+    client.once("clientReady", async () => {
         if (process.env.DEVELOPER_MODE == "true" || process.env.DATABASE_MODE == "true") return;
 
        async function keepThreadActive() {
