@@ -169,7 +169,7 @@ function AS(client, noblox, currentUser, admin, token, applicationid, prefix) {
 		) {
 			let guild = oldState.guild;
 			oldState.guild.channels
-				.fetch("1399402721647399004")
+				.fetch("578402807971971102")
 				.then((channel) => {
 					const embedAA = {
 						author: {
