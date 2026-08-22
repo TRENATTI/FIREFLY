@@ -14,7 +14,7 @@ async function CCS(client, noblox, currentUser, admin) {
 				);
 				if (guild.id == message.guild.id) {
 					const channel = await guild.channels.fetch(
-						`1399398960552087592`
+						`578402807971971102`
 					);
 					console.log(
 						new Date(),
