@@ -26,7 +26,7 @@ const RUN_INTERVAL = 24 * 60 * 60 * 1000;
 async function GBS(client, noblox, currentUser, admin) {
     // Keep the same developer-mode behavior as your existing module.
     /*if (process.env.DEVELOPER_MODE === "true") {
-        console.log("[global-ban-service] Developer mode enabled.");
+        console.log("| global-ban-service |Developer mode enabled.");
         return;
     }*/
 
@@ -122,7 +122,8 @@ async function GBS(client, noblox, currentUser, admin) {
                 try {
                     if (!guild.members.me?.permissions.has("BanMembers")) {
                         console.warn(
-                            `[global-ban-service] Missing Ban Members permission in ${guild.name}.`
+                            new Date(),
+                            `| global-ban-service |Missing Ban Members permission in ${guild.name}.`
                         );
                         continue;
                     }
@@ -145,7 +146,8 @@ async function GBS(client, noblox, currentUser, admin) {
 
                     if (alreadyBanned) {
                         console.log(
-                            `[global-ban-service] ${discordId} is already banned in ${guild.name}.`
+                            new Date(),
+                            `| global-ban-service |${discordId} is already banned in ${guild.name}.`
                         );
                         continue;
                     }
@@ -154,7 +156,8 @@ async function GBS(client, noblox, currentUser, admin) {
                     // Prevent attempting to ban the bot itself.
                     if (discordId === client.user.id) {
                         console.warn(
-                            `[global-ban-service] Skipping bot account ${discordId}.`
+                            new Date(),
+                            `| global-ban-service |Skipping bot account ${discordId}.`
                         );
                         continue;
                     }
@@ -162,7 +165,8 @@ async function GBS(client, noblox, currentUser, admin) {
                     // Prevent attempting to ban the server owner.
                     if (guild.ownerId === discordId) {
                         console.warn(
-                            `[global-ban-service] Skipping server owner ${discordId} in ${guild.name}.`
+                            new Date(),
+                            `| global-ban-service |Skipping server owner ${discordId} in ${guild.name}.`
                         );
                         continue;
                     }

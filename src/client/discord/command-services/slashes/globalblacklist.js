@@ -36,7 +36,7 @@ module.exports = {
 	async execute(interaction, noblox, admin) {
         // Keep the same developer-mode behavior as your existing module.
         /*if (process.env.DEVELOPER_MODE === "true") {
-            console.log("[globalban-command] Developer mode enabled.");
+            console.log("| globalban-command | Developer mode enabled.");
             return;
         }*/
 
@@ -150,11 +150,12 @@ module.exports = {
                 }
 
                 for (const [discordId, userInfo] of bannedUsers) {
-                    for (const guild of client.guilds.cache.values()) {
+                    for (const guild of interaction.client.guilds.cache.values()) {
                         try {
                             if (!guild.members.me?.permissions.has("BanMembers")) {
                                 console.warn(
-                                    `[globalban-command] Missing Ban Members permission in ${guild.name}.`
+                                    new Date(),
+                                    `| globalban-command | Missing Ban Members permission in ${guild.name}.`
                                 );
                                 continue;
                             }
@@ -177,16 +178,18 @@ module.exports = {
 
                             if (alreadyBanned) {
                                 console.log(
-                                    `[globalban-command] ${discordId} is already banned in ${guild.name}.`
+                                    new Date(),
+                                    `| globalban-command | ${discordId} is already banned in ${guild.name}.`
                                 );
                                 continue;
                             }
 
 
                             // Prevent attempting to ban the bot itself.
-                            if (discordId === client.user.id) {
+                            if (discordId === interaction.client.user.id) {
                                 console.warn(
-                                    `[globalban-command] Skipping bot account ${discordId}.`
+                                    new Date(),
+                                    `| globalban-command | Skipping bot account ${discordId}.`
                                 );
                                 continue;
                             }
@@ -194,7 +197,8 @@ module.exports = {
                             // Prevent attempting to ban the server owner.
                             if (guild.ownerId === discordId) {
                                 console.warn(
-                                    `[globalban-command] Skipping server owner ${discordId} in ${guild.name}.`
+                                    new Date(),
+                                    `| globalban-command | Skipping server owner ${discordId} in ${guild.name}.`
                                 );
                                 continue;
                             }
