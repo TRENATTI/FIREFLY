@@ -150,7 +150,7 @@ module.exports = {
                 }
 
                 for (const [discordId, userInfo] of bannedUsers) {
-                    for (const guild of client.guilds.cache.values()) {
+                    for (const guild of interaction.client.guilds.cache.values()) {
                         try {
                             if (!guild.members.me?.permissions.has("BanMembers")) {
                                 console.warn(
@@ -184,7 +184,7 @@ module.exports = {
 
 
                             // Prevent attempting to ban the bot itself.
-                            if (discordId === client.user.id) {
+                            if (discordId === interaction.client.user.id) {
                                 console.warn(
                                     `[globalban-command] Skipping bot account ${discordId}.`
                                 );
