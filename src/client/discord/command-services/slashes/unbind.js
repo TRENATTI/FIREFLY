@@ -6,7 +6,7 @@ require("dotenv").config();
 
 const {
     invalidateRoleBindings
-} = require("../logger/cache.js");
+} = require("./logger/cache.js");
 
 
 module.exports = {

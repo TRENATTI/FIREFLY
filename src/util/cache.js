@@ -1,324 +1,197 @@
-const {
-    SlashCommandBuilder
-} = require("discord.js");
+// ==========================================
+// SYSTEM CACHE
+// ==========================================
+//
+// This cache stores Firebase configuration
+// in memory so we don't need to read Firebase
+// every time somebody runs /update.
+//
+// Cache lifetime:
+// 60 seconds
+//
+// Bind/unbind commands invalidate the cache
+// immediately, so configuration changes take
+// effect without waiting for the cache to expire.
+// ==========================================
 
-require("dotenv").config();
+const CACHE_TTL = 60 * 1000;
 
-const {
-    invalidateRoleBindings
-} = require("../utils/cache");
 
+// ==========================================
+// CACHE STORAGE
+// ==========================================
+
+const cache = {
+    roleBindings: new Map(),
+    logChannels: new Map()
+};
+
+
+// ==========================================
+// ROLE BINDING CACHE
+// ==========================================
+
+async function getRoleBindings(admin, guildId) {
+
+    const now = Date.now();
+
+    const cached =
+        cache.roleBindings.get(guildId);
+
+
+    // ------------------------------------------
+    // RETURN CACHE IF STILL VALID
+    // ------------------------------------------
+
+    if (
+        cached &&
+        now - cached.timestamp < CACHE_TTL
+    ) {
+        return cached.data;
+    }
+
+
+    // ------------------------------------------
+    // LOAD FROM FIREBASE
+    // ------------------------------------------
+
+    const db = admin.database();
+
+    const snapshot = await db
+        .ref("system")
+        .child("role_bindings")
+        .child(guildId)
+        .get();
+
+
+    const data =
+        snapshot.exists()
+            ? snapshot.val()
+            : {};
+
+
+    // ------------------------------------------
+    // SAVE TO CACHE
+    // ------------------------------------------
+
+    cache.roleBindings.set(
+        guildId,
+        {
+            data: data,
+            timestamp: now
+        }
+    );
+
+
+    return data;
+}
+
+
+// ==========================================
+// INVALIDATE ROLE BINDINGS
+// ==========================================
+
+function invalidateRoleBindings(guildId) {
+
+    cache.roleBindings.delete(guildId);
+
+}
+
+
+// ==========================================
+// LOG CHANNEL CACHE
+// ==========================================
+
+async function getLogChannel(admin, guildId) {
+
+    const now = Date.now();
+
+    const cached =
+        cache.logChannels.get(guildId);
+
+
+    // ------------------------------------------
+    // RETURN CACHE IF STILL VALID
+    // ------------------------------------------
+
+    if (
+        cached &&
+        now - cached.timestamp < CACHE_TTL
+    ) {
+        return cached.data;
+    }
+
+
+    // ------------------------------------------
+    // LOAD FROM FIREBASE
+    // ------------------------------------------
+
+    const db = admin.database();
+
+    const snapshot = await db
+        .ref("system")
+        .child("log_channels")
+        .child(guildId)
+        .child("updateVerify")
+        .get();
+
+
+    const data =
+        snapshot.exists()
+            ? snapshot.val()
+            : null;
+
+
+    // ------------------------------------------
+    // SAVE TO CACHE
+    // ------------------------------------------
+
+    cache.logChannels.set(
+        guildId,
+        {
+            data: data,
+            timestamp: now
+        }
+    );
+
+
+    return data;
+}
+
+
+// ==========================================
+// INVALIDATE LOG CHANNEL
+// ==========================================
+
+function invalidateLogChannel(guildId) {
+
+    cache.logChannels.delete(guildId);
+
+}
+
+
+// ==========================================
+// CLEAR EVERYTHING
+// ==========================================
+
+function clearCache() {
+
+    cache.roleBindings.clear();
+    cache.logChannels.clear();
+
+}
+
+
+// ==========================================
+// EXPORT
+// ==========================================
 
 module.exports = {
+    getRoleBindings,
+    invalidateRoleBindings,
 
-    data: new SlashCommandBuilder()
-        .setName("bind")
-        .setDescription(
-            "Bind a Discord role to a Roblox group rank."
-        )
+    getLogChannel,
+    invalidateLogChannel,
 
-        .addIntegerOption(option =>
-            option
-                .setName("group")
-                .setDescription(
-                    "The Roblox Group ID."
-                )
-                .setRequired(true)
-        )
-
-        .addIntegerOption(option =>
-            option
-                .setName("rank")
-                .setDescription(
-                    "The Roblox rank number."
-                )
-                .setRequired(true)
-                .setMinValue(0)
-                .setMaxValue(255)
-        )
-
-        .addRoleOption(option =>
-            option
-                .setName("discord-role")
-                .setDescription(
-                    "The Discord role to bind."
-                )
-                .setRequired(true)
-        ),
-
-    subdata: {
-        cooldown: 3,
-    },
-
-
-    async execute(interaction, noblox, admin) {
-
-        // ==========================================
-        // OWNER AUTHORIZATION
-        // ==========================================
-
-        if (
-            interaction.user.id !== "170639211182030850" &&
-            interaction.user.id !== "463516784578789376" &&
-            interaction.user.id !== "206090047462703104" &&
-            interaction.user.id !== "1154775391597240391" &&
-            interaction.user.id !== "175922772923383808"
-        ) {
-
-            return interaction.reply({
-                content:
-                    `Sorry ${interaction.user}, but only the owners can run that command!`,
-                ephemeral: true
-            });
-
-        }
-
-
-        // ==========================================
-        // CHECK GUILD
-        // ==========================================
-
-        if (!interaction.guild) {
-
-            return interaction.reply({
-                content:
-                    "This command can only be used inside a server.",
-                ephemeral: true
-            });
-
-        }
-
-
-        // ==========================================
-        // GET OPTIONS
-        // ==========================================
-
-        const groupId =
-            interaction.options.getInteger("group");
-
-        const rank =
-            interaction.options.getInteger("rank");
-
-        const discordRole =
-            interaction.options.getRole(
-                "discord-role"
-            );
-
-
-        try {
-
-            // ==========================================
-            // CHECK @EVERYONE
-            // ==========================================
-
-            if (
-                discordRole.id ===
-                interaction.guild.id
-            ) {
-
-                return interaction.reply({
-                    content:
-                        "You cannot bind the @everyone role.",
-                    ephemeral: true
-                });
-
-            }
-
-
-            // ==========================================
-            // GET BOT MEMBER
-            // ==========================================
-
-            const botMember =
-                interaction.guild.members.me;
-
-
-            if (!botMember) {
-
-                return interaction.reply({
-                    content:
-                        "I could not find my bot member in this server.",
-                    ephemeral: true
-                });
-
-            }
-
-
-            // ==========================================
-            // CHECK ROLE HIERARCHY
-            // ==========================================
-
-            if (
-                discordRole.position >=
-                botMember.roles.highest.position
-            ) {
-
-                return interaction.reply({
-                    content:
-                        "I cannot manage that Discord role because it is higher than or equal to my highest role.",
-                    ephemeral: true
-                });
-
-            }
-
-
-            // ==========================================
-            // GET ROBLOX GROUP
-            // ==========================================
-
-            const group =
-                await noblox.getGroup(groupId);
-
-
-            if (!group) {
-
-                return interaction.reply({
-                    content:
-                        "That Roblox group could not be found.",
-                    ephemeral: true
-                });
-
-            }
-
-
-            // ==========================================
-            // GET ROBLOX RANKS
-            // ==========================================
-
-            const robloxRoles =
-                await noblox.getRoles(groupId);
-
-
-            const robloxRank =
-                robloxRoles.find(
-                    role => role.rank === rank
-                );
-
-
-            if (!robloxRank) {
-
-                return interaction.reply({
-                    content:
-                        `Rank **${rank}** does not exist in **${group.name}**.`,
-                    ephemeral: true
-                });
-
-            }
-
-
-            // ==========================================
-            // UNIQUE BINDING ID
-            // ==========================================
-            //
-            // Group + Rank + Discord Role
-            //
-            // This allows multiple Discord roles
-            // to be bound to the same Roblox rank.
-            // ==========================================
-
-            const bindingId =
-                `${groupId}_${rank}_${discordRole.id}`;
-
-
-            // ==========================================
-            // FIREBASE REFERENCE
-            // ==========================================
-
-            const ref = admin
-                .database()
-                .ref("system")
-                .child("role_bindings")
-                .child(interaction.guild.id)
-                .child(bindingId);
-
-
-            // ==========================================
-            // CHECK EXISTING BINDING
-            // ==========================================
-
-            const existing =
-                await ref.get();
-
-
-            if (existing.exists()) {
-
-                return interaction.reply({
-                    content:
-                        `**${discordRole.name}** is already bound to **${group.name} — ${robloxRank.name} (${rank})**.`,
-                    ephemeral: true
-                });
-
-            }
-
-
-            // ==========================================
-            // SAVE BINDING
-            // ==========================================
-
-            await ref.set({
-
-                groupId:
-                    groupId,
-
-                groupName:
-                    group.name,
-
-                rank:
-                    rank,
-
-                rankName:
-                    robloxRank.name,
-
-                discordRoleId:
-                    discordRole.id,
-
-                discordRoleName:
-                    discordRole.name,
-
-                createdBy:
-                    interaction.user.id,
-
-                createdAt:
-                    Date.now()
-
-            });
-
-
-            // ==========================================
-            // CLEAR CACHE
-            // ==========================================
-
-            invalidateRoleBindings(
-                interaction.guild.id
-            );
-
-
-            // ==========================================
-            // SUCCESS
-            // ==========================================
-
-            return interaction.reply({
-                content:
-                    `Successfully bound **${discordRole.name}** to **${group.name} — ${robloxRank.name} (${rank})**.`,
-                ephemeral: true
-            });
-
-
-        } catch (error) {
-
-            console.error(
-                "Bind error:",
-                error
-            );
-
-
-            return interaction.reply({
-                content:
-                    "An error occurred while creating the rank binding. Make sure the Roblox group exists and Noblox is authenticated.",
-                ephemeral: true
-            });
-
-        }
-
-    }
+    clearCache
 };
