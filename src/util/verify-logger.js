@@ -2,15 +2,16 @@ const {
     EmbedBuilder
 } = require("discord.js");
 
+const {
+    getLogChannel
+} = require("./cache");
 
-/**
- * Logs verification and update events.
- *
- * @param {Object} client Discord client
- * @param {Object} admin Firebase admin instance
- * @param {Object} options Logging options
- */
-async function logUpdateVerify(client, admin, options = {}) {
+
+async function logUpdateVerify(
+    client,
+    admin,
+    options = {}
+) {
 
     const {
         guildId,
@@ -29,37 +30,32 @@ async function logUpdateVerify(client, admin, options = {}) {
     // VALIDATION
     // ==========================================
 
-    if (!client || !admin || !guildId) {
+    if (
+        !client ||
+        !admin ||
+        !guildId
+    ) {
         return;
     }
 
 
     try {
 
-        const db = admin.database();
-
-
         // ==========================================
-        // FIND LOG CHANNEL
+        // GET CACHED LOG CONFIGURATION
         // ==========================================
 
-        const snapshot = await db
-            .ref("system")
-            .child("log_channels")
-            .child(guildId)
-            .child("updateVerify")
-            .get();
+        const logData =
+            await getLogChannel(
+                admin,
+                guildId
+            );
 
 
-        if (!snapshot.exists()) {
-            return;
-        }
-
-
-        const logData = snapshot.val();
-
-
-        if (!logData.channelId) {
+        if (
+            !logData ||
+            !logData.channelId
+        ) {
             return;
         }
 
@@ -68,7 +64,11 @@ async function logUpdateVerify(client, admin, options = {}) {
         // GET GUILD
         // ==========================================
 
-        const guild = client.guilds.cache.get(guildId);
+        const guild =
+            client.guilds.cache.get(
+                guildId
+            );
+
 
         if (!guild) {
             return;
@@ -79,9 +79,14 @@ async function logUpdateVerify(client, admin, options = {}) {
         // GET CHANNEL
         // ==========================================
 
-        const channel = await guild.channels
-            .fetch(logData.channelId)
-            .catch(() => null);
+        const channel =
+            await guild.channels
+                .fetch(
+                    logData.channelId
+                )
+                .catch(
+                    () => null
+                );
 
 
         if (!channel) {
@@ -91,6 +96,7 @@ async function logUpdateVerify(client, admin, options = {}) {
             );
 
             return;
+
         }
 
 
@@ -98,30 +104,48 @@ async function logUpdateVerify(client, admin, options = {}) {
         // EMBED SETTINGS
         // ==========================================
 
-        let color = 0x5865F2;
-        let title = "Verification / Update Log";
+        let color =
+            0x5865F2;
+
+        let title =
+            "Verification / Update Log";
 
 
-        if (type === "verify") {
+        if (
+            type === "verify"
+        ) {
 
-            color = 0x57F287;
-            title = "Roblox Verification";
+            color =
+                0x57F287;
+
+            title =
+                "Roblox Verification";
 
         }
 
 
-        if (type === "update") {
+        if (
+            type === "update"
+        ) {
 
-            color = 0x3498DB;
-            title = "Roblox Account Update";
+            color =
+                0x3498DB;
+
+            title =
+                "Roblox Account Update";
 
         }
 
 
-        if (type === "error") {
+        if (
+            type === "error"
+        ) {
 
-            color = 0xED4245;
-            title = "Verification / Update Error";
+            color =
+                0xED4245;
+
+            title =
+                "Verification / Update Error";
 
         }
 
@@ -130,10 +154,11 @@ async function logUpdateVerify(client, admin, options = {}) {
         // CREATE EMBED
         // ==========================================
 
-        const embed = new EmbedBuilder()
-            .setColor(color)
-            .setTitle(title)
-            .setTimestamp();
+        const embed =
+            new EmbedBuilder()
+                .setColor(color)
+                .setTitle(title)
+                .setTimestamp();
 
 
         // ==========================================
@@ -143,10 +168,14 @@ async function logUpdateVerify(client, admin, options = {}) {
         if (discordUser) {
 
             embed.addFields({
-                name: "Discord User",
+                name:
+                    "Discord User",
+
                 value:
                     `<@${discordUser}> (\`${discordUser}\`)`,
-                inline: false
+
+                inline:
+                    false
             });
 
         }
@@ -159,10 +188,14 @@ async function logUpdateVerify(client, admin, options = {}) {
         if (robloxUsername) {
 
             embed.addFields({
-                name: "Roblox Username",
+                name:
+                    "Roblox Username",
+
                 value:
                     `\`${robloxUsername}\``,
-                inline: true
+
+                inline:
+                    true
             });
 
         }
@@ -175,10 +208,14 @@ async function logUpdateVerify(client, admin, options = {}) {
         if (robloxId) {
 
             embed.addFields({
-                name: "Roblox ID",
+                name:
+                    "Roblox ID",
+
                 value:
                     `\`${robloxId}\``,
-                inline: true
+
+                inline:
+                    true
             });
 
         }
@@ -188,15 +225,21 @@ async function logUpdateVerify(client, admin, options = {}) {
         // NICKNAME
         // ==========================================
 
-        if (nicknameChanged !== undefined) {
+        if (
+            nicknameChanged !== undefined
+        ) {
 
             embed.addFields({
-                name: "Nickname",
+                name:
+                    "Nickname",
+
                 value:
                     nicknameChanged
                         ? "Updated"
                         : "Not changed",
-                inline: true
+
+                inline:
+                    true
             });
 
         }
@@ -206,15 +249,24 @@ async function logUpdateVerify(client, admin, options = {}) {
         // ROLES ADDED
         // ==========================================
 
-        if (rolesAdded.length > 0) {
+        if (
+            rolesAdded.length > 0
+        ) {
 
             embed.addFields({
-                name: "Roles Added",
+                name:
+                    "Roles Added",
+
                 value:
                     rolesAdded
-                        .map(role => `<@&${role}>`)
+                        .map(
+                            role =>
+                                `<@&${role}>`
+                        )
                         .join(", "),
-                inline: false
+
+                inline:
+                    false
             });
 
         }
@@ -224,15 +276,24 @@ async function logUpdateVerify(client, admin, options = {}) {
         // ROLES REMOVED
         // ==========================================
 
-        if (rolesRemoved.length > 0) {
+        if (
+            rolesRemoved.length > 0
+        ) {
 
             embed.addFields({
-                name: "Roles Removed",
+                name:
+                    "Roles Removed",
+
                 value:
                     rolesRemoved
-                        .map(role => `<@&${role}>`)
+                        .map(
+                            role =>
+                                `<@&${role}>`
+                        )
                         .join(", "),
-                inline: false
+
+                inline:
+                    false
             });
 
         }
@@ -245,10 +306,14 @@ async function logUpdateVerify(client, admin, options = {}) {
         if (error) {
 
             embed.addFields({
-                name: "Error",
+                name:
+                    "Error",
+
                 value:
                     `\`\`\`\n${String(error).slice(0, 1000)}\n\`\`\``,
-                inline: false
+
+                inline:
+                    false
             });
 
         }
@@ -259,8 +324,11 @@ async function logUpdateVerify(client, admin, options = {}) {
         // ==========================================
 
         await channel.send({
-            embeds: [embed]
+            embeds: [
+                embed
+            ]
         });
+
 
     } catch (error) {
 
@@ -270,6 +338,7 @@ async function logUpdateVerify(client, admin, options = {}) {
         );
 
     }
+
 }
 
 

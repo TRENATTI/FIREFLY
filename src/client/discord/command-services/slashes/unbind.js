@@ -4,30 +4,52 @@ const {
 
 require("dotenv").config();
 
+const {
+    invalidateRoleBindings
+} = require("../logger/cache.js");
+
+
 module.exports = {
+
     data: new SlashCommandBuilder()
         .setName("unbind")
-        .setDescription("Remove a Roblox rank to Discord role binding.")
+        .setDescription(
+            "Remove a Discord role from a Roblox group rank binding."
+        )
 
         .addIntegerOption(option =>
             option
                 .setName("group")
-                .setDescription("The Roblox Group ID.")
+                .setDescription(
+                    "The Roblox Group ID."
+                )
                 .setRequired(true)
         )
 
         .addIntegerOption(option =>
             option
                 .setName("rank")
-                .setDescription("The Roblox rank number.")
+                .setDescription(
+                    "The Roblox rank number."
+                )
                 .setRequired(true)
                 .setMinValue(0)
                 .setMaxValue(255)
+        )
+
+        .addRoleOption(option =>
+            option
+                .setName("discord-role")
+                .setDescription(
+                    "The Discord role to unbind."
+                )
+                .setRequired(true)
         ),
 
     subdata: {
         cooldown: 3,
     },
+
 
     async execute(interaction, noblox, admin) {
 
@@ -36,64 +58,69 @@ module.exports = {
         // ==========================================
 
         if (
-            interaction.user.id == "170639211182030850" ||
-            interaction.user.id == "463516784578789376" ||
-            interaction.user.id == "206090047462703104" ||
-            interaction.user.id == "1154775391597240391" ||
-            interaction.user.id == "175922772923383808"
+            interaction.user.id !== "170639211182030850" &&
+            interaction.user.id !== "463516784578789376" &&
+            interaction.user.id !== "206090047462703104" &&
+            interaction.user.id !== "1154775391597240391" &&
+            interaction.user.id !== "175922772923383808"
         ) {
-            // Authorized
-        } else {
+
             return interaction.reply({
-                content: `Sorry ${interaction.user}, but only the owners can run that command!`,
+                content:
+                    `Sorry ${interaction.user}, but only the owners can run that command!`,
                 ephemeral: true
             });
+
         }
 
 
         // ==========================================
-        // DATABASE
+        // CHECK GUILD
         // ==========================================
 
-        const db = admin.database();
+        if (!interaction.guild) {
+
+            return interaction.reply({
+                content:
+                    "This command can only be used inside a server.",
+                ephemeral: true
+            });
+
+        }
 
 
         // ==========================================
-        // GET COMMAND OPTIONS
+        // GET OPTIONS
         // ==========================================
 
-        const groupId = interaction.options.getInteger("group");
-        const rank = interaction.options.getInteger("rank");
+        const groupId =
+            interaction.options.getInteger("group");
+
+        const rank =
+            interaction.options.getInteger("rank");
+
+        const discordRole =
+            interaction.options.getRole(
+                "discord-role"
+            );
 
 
         try {
 
             // ==========================================
-            // CHECK ROBLOX GROUP
-            // ==========================================
-
-            const group = await noblox.getGroup(groupId);
-
-            if (!group) {
-                return interaction.reply({
-                    content: "That Roblox group could not be found.",
-                    ephemeral: true
-                });
-            }
-
-
-            // ==========================================
             // CREATE BINDING ID
             // ==========================================
 
-            const bindingId = `${groupId}_${rank}`;
+            const bindingId =
+                `${groupId}_${rank}_${discordRole.id}`;
 
 
             // ==========================================
             // FIREBASE REFERENCE
             // ==========================================
 
-            const ref = db
+            const ref = admin
+                .database()
                 .ref("system")
                 .child("role_bindings")
                 .child(interaction.guild.id)
@@ -101,32 +128,42 @@ module.exports = {
 
 
             // ==========================================
-            // CHECK IF BINDING EXISTS
+            // CHECK BINDING
             // ==========================================
 
-            const snapshot = await ref.get();
+            const snapshot =
+                await ref.get();
+
 
             if (!snapshot.exists()) {
+
                 return interaction.reply({
                     content:
-                        `No binding exists for **${group.name} — Rank ${rank}**.`,
+                        `No binding exists for **${discordRole.name}** with Roblox Group **${groupId}** and Rank **${rank}**.`,
                     ephemeral: true
                 });
+
             }
 
 
-            // ==========================================
-            // GET BINDING DATA
-            // ==========================================
-
-            const binding = snapshot.val();
+            const binding =
+                snapshot.val();
 
 
             // ==========================================
-            // REMOVE BINDING
+            // DELETE
             // ==========================================
 
             await ref.remove();
+
+
+            // ==========================================
+            // CLEAR CACHE
+            // ==========================================
+
+            invalidateRoleBindings(
+                interaction.guild.id
+            );
 
 
             // ==========================================
@@ -135,14 +172,18 @@ module.exports = {
 
             return interaction.reply({
                 content:
-                    `Successfully unbound **${binding.discordRoleName}** from **${group.name} — Rank ${rank}**.`,
+                    `Successfully unbound **${discordRole.name}** from **${binding.groupName} — ${binding.rankName} (${binding.rank})**.`,
                 ephemeral: true
             });
 
 
         } catch (error) {
 
-            console.error("Unbind error:", error);
+            console.error(
+                "Unbind error:",
+                error
+            );
+
 
             return interaction.reply({
                 content:
@@ -151,5 +192,6 @@ module.exports = {
             });
 
         }
+
     }
 };
