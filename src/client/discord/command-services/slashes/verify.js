@@ -75,7 +75,6 @@ module.exports = {
                                             )
                                             .setButtonAccessory((button) =>
                                                 button
-                                                    .setCustomId('verify_container_roblox_button')
                                                     .setLabel('Verify')
                                                     .setStyle(ButtonStyle.Link)
                                                     .setURL(`https://authorize.roblox.com/?client_id=${process.env.ROBLOX_OAUTH2_CLIENTID}&response_type=Code&redirect_uri=https://auth.trenati.dev/redirect&scope=openid+profile&state=${code}`)
