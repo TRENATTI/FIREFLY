@@ -5,11 +5,16 @@ const {
 require("dotenv").config();
 
 const {
+    getRoleBindings
+} = require("../utils/cache");
+
+const {
     logUpdateVerify
-} = require("./logger/verify-logger.js");
+} = require("../utils/logger");
 
 
 module.exports = {
+
     data: new SlashCommandBuilder()
         .setName("update")
         .setDescription(
@@ -20,9 +25,11 @@ module.exports = {
         cooldown: 3,
     },
 
+
     async execute(interaction, noblox, admin) {
 
-        const db = admin.database();
+        const db =
+            admin.database();
 
 
         try {
@@ -31,11 +38,14 @@ module.exports = {
             // CHECK VERIFICATION
             // ==========================================
 
-            const snapshot = await db
-                .ref("system")
-                .child("user_verification")
-                .child(`discord_${interaction.user.id}`)
-                .get();
+            const snapshot =
+                await db
+                    .ref("system")
+                    .child("user_verification")
+                    .child(
+                        `discord_${interaction.user.id}`
+                    )
+                    .get();
 
 
             if (!snapshot.exists()) {
@@ -49,7 +59,8 @@ module.exports = {
             }
 
 
-            const data = snapshot.val();
+            const data =
+                snapshot.val();
 
 
             if (
@@ -71,7 +82,8 @@ module.exports = {
             // CHECK GUILD
             // ==========================================
 
-            const guild = interaction.guild;
+            const guild =
+                interaction.guild;
 
 
             if (!guild) {
@@ -89,9 +101,10 @@ module.exports = {
             // GET MEMBER
             // ==========================================
 
-            const member = await guild.members
-                .fetch(interaction.user.id)
-                .catch(() => null);
+            const member =
+                await guild.members
+                    .fetch(interaction.user.id)
+                    .catch(() => null);
 
 
             if (!member) {
@@ -109,10 +122,14 @@ module.exports = {
             // UPDATE NICKNAME
             // ==========================================
 
-            let nicknameUpdated = false;
+            let nicknameUpdated =
+                false;
 
 
-            if (member.id !== guild.ownerId) {
+            if (
+                member.id !==
+                guild.ownerId
+            ) {
 
                 try {
 
@@ -120,7 +137,8 @@ module.exports = {
                         data.robloxUsername
                     );
 
-                    nicknameUpdated = true;
+                    nicknameUpdated =
+                        true;
 
                 } catch (error) {
 
@@ -135,59 +153,18 @@ module.exports = {
 
 
             // ==========================================
-            // GET ROLE BINDINGS
-            // ==========================================
-
-            const bindingsSnapshot = await db
-                .ref("system")
-                .child("role_bindings")
-                .child(guild.id)
-                .get();
-
-
-            if (!bindingsSnapshot.exists()) {
-
-                await logUpdateVerify(
-                    interaction.client,
-                    admin,
-                    {
-                        guildId: guild.id,
-                        type: "update",
-
-                        discordUser:
-                            interaction.user.id,
-
-                        robloxUsername:
-                            data.robloxUsername,
-
-                        robloxId:
-                            data.robloxID,
-
-                        nicknameChanged:
-                            nicknameUpdated
-                    }
-                );
-
-
-                return interaction.reply({
-                    content:
-                        `Your nickname has been updated to **${data.robloxUsername}**.\n\nNo Roblox rank bindings are configured for this server.`,
-                    ephemeral: true
-                });
-
-            }
-
-
-            // ==========================================
-            // GET BINDINGS
+            // GET CACHED BINDINGS
             // ==========================================
 
             const bindings =
-                bindingsSnapshot.val();
+                await getRoleBindings(
+                    admin,
+                    guild.id
+                );
 
 
             // ==========================================
-            // TRACK ROLE CHANGES
+            // ROLE ARRAYS
             // ==========================================
 
             const rolesToAdd = [];
@@ -195,35 +172,46 @@ module.exports = {
 
 
             // ==========================================
-            // CHECK EACH BINDING
+            // ROBLOX RANK CACHE
+            // ==========================================
+            //
+            // groupId -> rank
+            //
+            // This prevents multiple API calls
+            // for bindings belonging to the same
+            // Roblox group.
+            // ==========================================
+
+            const rankCache =
+                new Map();
+
+
+            // ==========================================
+            // PROCESS BINDINGS
             // ==========================================
 
             for (
-                const [bindingId, binding]
+                const [
+                    bindingId,
+                    binding
+                ]
                 of Object.entries(bindings)
             ) {
 
                 try {
 
                     const groupId =
-                        Number(binding.groupId);
+                        Number(
+                            binding.groupId
+                        );
 
                     const requiredRank =
-                        Number(binding.rank);
+                        Number(
+                            binding.rank
+                        );
 
                     const discordRoleId =
                         binding.discordRoleId;
-
-
-                    // ==========================================
-                    // GET ROBLOX RANK
-                    // ==========================================
-
-                    const userRank =
-                        await noblox.getRankInGroup(
-                            groupId,
-                            Number(data.robloxID)
-                        );
 
 
                     // ==========================================
@@ -243,14 +231,53 @@ module.exports = {
                         );
 
                         continue;
+
                     }
 
 
                     // ==========================================
-                    // RANK MATCH
+                    // GET ROBLOX RANK FROM CACHE
                     // ==========================================
 
-                    if (userRank === requiredRank) {
+                    let userRank;
+
+
+                    if (
+                        rankCache.has(
+                            groupId
+                        )
+                    ) {
+
+                        userRank =
+                            rankCache.get(
+                                groupId
+                            );
+
+                    } else {
+
+                        userRank =
+                            await noblox.getRankInGroup(
+                                groupId,
+                                Number(data.robloxID)
+                            );
+
+
+                        rankCache.set(
+                            groupId,
+                            userRank
+                        );
+
+                    }
+
+
+                    // ==========================================
+                    // RANK MATCHES
+                    // ==========================================
+
+                    if (
+                        userRank ===
+                        requiredRank
+                    ) {
 
                         if (
                             !member.roles.cache.has(
@@ -287,6 +314,7 @@ module.exports = {
 
                     }
 
+
                 } catch (error) {
 
                     console.warn(
@@ -303,13 +331,17 @@ module.exports = {
             // ADD ROLES
             // ==========================================
 
-            for (const role of rolesToAdd) {
+            for (
+                const role
+                of rolesToAdd
+            ) {
 
                 try {
 
                     if (
                         role.position >=
-                        guild.members.me.roles.highest.position
+                        guild.members.me
+                            .roles.highest.position
                     ) {
 
                         console.warn(
@@ -317,10 +349,14 @@ module.exports = {
                         );
 
                         continue;
+
                     }
 
 
-                    await member.roles.add(role);
+                    await member.roles.add(
+                        role
+                    );
+
 
                 } catch (error) {
 
@@ -338,24 +374,32 @@ module.exports = {
             // REMOVE ROLES
             // ==========================================
 
-            for (const role of rolesToRemove) {
+            for (
+                const role
+                of rolesToRemove
+            ) {
 
                 try {
 
                     if (
                         role.position >=
-                        guild.members.me.roles.highest.position
+                        guild.members.me
+                            .roles.highest.position
                     ) {
 
                         console.warn(
-                            `Cannot remove role ${role.name}: role is higher than or equal to the bot's highest role.`
+                            `Cannot remove role ${role.name}: role is higher than or equal to my highest role.`
                         );
 
                         continue;
+
                     }
 
 
-                    await member.roles.remove(role);
+                    await member.roles.remove(
+                        role
+                    );
+
 
                 } catch (error) {
 
@@ -377,9 +421,11 @@ module.exports = {
                 interaction.client,
                 admin,
                 {
-                    guildId: guild.id,
+                    guildId:
+                        guild.id,
 
-                    type: "update",
+                    type:
+                        "update",
 
                     discordUser:
                         interaction.user.id,
@@ -407,7 +453,7 @@ module.exports = {
 
 
             // ==========================================
-            // ROLE SUMMARY
+            // RESPONSE NAMES
             // ==========================================
 
             const addedNames =
@@ -422,24 +468,37 @@ module.exports = {
                 );
 
 
-            let roleMessage = "";
+            // ==========================================
+            // RESPONSE
+            // ==========================================
+
+            let roleMessage =
+                "";
 
 
-            if (addedNames.length > 0) {
+            if (
+                addedNames.length > 0
+            ) {
 
                 roleMessage +=
                     `\n\n**Roles Added:** ${addedNames
-                        .map(name => `\`${name}\``)
+                        .map(
+                            name => `\`${name}\``
+                        )
                         .join(", ")}`;
 
             }
 
 
-            if (removedNames.length > 0) {
+            if (
+                removedNames.length > 0
+            ) {
 
                 roleMessage +=
                     `\n\n**Roles Removed:** ${removedNames
-                        .map(name => `\`${name}\``)
+                        .map(
+                            name => `\`${name}\``
+                        )
                         .join(", ")}`;
 
             }
@@ -481,22 +540,36 @@ module.exports = {
             // LOG ERROR
             // ==========================================
 
-            await logUpdateVerify(
-                interaction.client,
-                admin,
-                {
-                    guildId:
-                        interaction.guild?.id,
+            try {
 
-                    type: "error",
+                await logUpdateVerify(
+                    interaction.client,
+                    admin,
+                    {
+                        guildId:
+                            interaction.guild?.id,
 
-                    discordUser:
-                        interaction.user.id,
+                        type:
+                            "error",
 
-                    error:
-                        error.stack || error.message
-                }
-            );
+                        discordUser:
+                            interaction.user.id,
+
+                        error:
+                            error.stack ||
+                            error.message ||
+                            String(error)
+                    }
+                );
+
+            } catch (loggerError) {
+
+                console.error(
+                    "Failed to log update error:",
+                    loggerError
+                );
+
+            }
 
 
             // ==========================================
@@ -510,5 +583,6 @@ module.exports = {
             });
 
         }
+
     }
 };
