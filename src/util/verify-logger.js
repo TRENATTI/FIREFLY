@@ -4,7 +4,7 @@ const {
 
 const {
     getLogChannel
-} = require("./cache");
+} = require("./cache.js");
 
 
 async function logUpdateVerify(

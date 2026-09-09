@@ -6,11 +6,11 @@ require("dotenv").config();
 
 const {
     getRoleBindings
-} = require("../utils/cache");
+} = require("./logger/cache.js");
 
 const {
     logUpdateVerify
-} = require("../utils/logger");
+} = require("./logger/verify-logger.js");
 
 
 module.exports = {
