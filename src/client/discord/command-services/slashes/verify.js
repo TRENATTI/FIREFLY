@@ -25,18 +25,19 @@ module.exports = {
 	async execute(interaction, noblox, admin) {
         const db = admin.database();
 
-        const snapshot = await db
+        const ref = await db
                     .ref("system")
                     .child("user_verification")
-                    .child(`discord_${interaction.user.id}`)
-                    .once("value");
+                    .child(`discord_${interaction.user.id}`);
 
         const code = makeStatecode(10)
 
-        snapshot.ref('verificationChannelID').set(`${interaction.channel.id}`)
-        snapshot.ref("verified").set(false)
-        snapshot.ref("statecode").set(`${code}`)
-        snapshot.ref("discordID").set(`${interaction.user.id}`)
+        await ref.update({
+            verificationChannelID: interaction.channel.id,
+            verified: false,
+            statecode: code,
+            discordID: interaction.user.id
+        });
 
         async function verify_button_collector_function(responseObject) {
             const collectorFilter = (i) => i.user.id === interaction.user.id;
