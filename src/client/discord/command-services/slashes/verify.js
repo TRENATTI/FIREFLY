@@ -34,7 +34,7 @@ module.exports = {
             const code = makeStatecode(10)
 
             await ref.update({
-                verificationChannelID: interaction.channel.id,
+                verificationGuildID: interaction.guild.id,
                 verified: false,
                 statecode: code,
                 discordID: interaction.user.id
