@@ -208,7 +208,7 @@ async function GBS(client, noblox, currentUser, admin) {
         );
 
         // Run immediately on startup.
-        await processBans();
+        // await processBans();
 
         // Then run every 24 hours.
         setInterval(async () => {
