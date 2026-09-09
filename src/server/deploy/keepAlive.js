@@ -117,7 +117,7 @@ function keepAlive(
                 });
 
             // Change Discord nickname
-            const guild = client.guilds.cache.get(config.guildID);
+            const guild = client.guilds.cache.get(data.verificationGuildID);
 
             if (guild) {
                 const member = await guild.members
@@ -127,7 +127,7 @@ function keepAlive(
                 if (member && member.id !== guild.ownerId) {
                     await member.setNickname(
                         userInfo.preferred_username
-                    ).catch(console.error);
+                    ).catch(console.warn);
                 }
             }
 
