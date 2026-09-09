@@ -123,7 +123,7 @@ async function GBS(client, noblox, currentUser, admin) {
                     if (!guild.members.me?.permissions.has("BanMembers")) {
                         console.warn(
                             new Date(),
-                            `| global-ban-service |Missing Ban Members permission in ${guild.name}.`
+                            `| global-ban-service | Missing Ban Members permission in ${guild.name}.`
                         );
                         continue;
                     }
@@ -147,7 +147,7 @@ async function GBS(client, noblox, currentUser, admin) {
                     if (alreadyBanned) {
                         console.log(
                             new Date(),
-                            `| global-ban-service |${discordId} is already banned in ${guild.name}.`
+                            `| global-ban-service | ${discordId} is already banned in ${guild.name}.`
                         );
                         continue;
                     }
@@ -157,7 +157,7 @@ async function GBS(client, noblox, currentUser, admin) {
                     if (discordId === client.user.id) {
                         console.warn(
                             new Date(),
-                            `| global-ban-service |Skipping bot account ${discordId}.`
+                            `| global-ban-service | Skipping bot account ${discordId}.`
                         );
                         continue;
                     }
@@ -166,7 +166,7 @@ async function GBS(client, noblox, currentUser, admin) {
                     if (guild.ownerId === discordId) {
                         console.warn(
                             new Date(),
-                            `| global-ban-service |Skipping server owner ${discordId} in ${guild.name}.`
+                            `| global-ban-service | Skipping server owner ${discordId} in ${guild.name}.`
                         );
                         continue;
                     }
