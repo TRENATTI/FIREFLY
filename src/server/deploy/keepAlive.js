@@ -170,6 +170,22 @@ function keepAlive(
 
     });
 
+    
+    // ======================================================
+    // LEGAL PAGES
+    // ======================================================
+
+    server.get("/terms", (req, res) => {
+        return res.sendFile(
+            path.join(__dirname, "public", "terms.html")
+        );
+    });
+
+    server.get("/privacy-policy", (req, res) => {
+        return res.sendFile(
+            path.join(__dirname, "public", "privacy-policy.html")
+        );
+    });
 
     // ==================================================
     // START ROBLOX OAUTH
