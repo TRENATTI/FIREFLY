@@ -1,0 +1,194 @@
+@import url('https://fonts.googleapis.com/css?family=Exo:400,700');
+
+*{
+    font-family: 'Exo', sans-serif;
+    margin: 0px;
+    padding: 0px;
+    box-sizing: border-box;
+    scroll-behavior: smooth;
+}
+
+body {
+	box-sizing: border-box;
+	overflow-x: hidden !important;
+}
+
+:root {
+    --primary-color: rgb(0, 0, 0);
+    --secondary-color: rgb(30, 20, 18);
+    --third-color: rgb(217, 145, 130);
+}
+
+::selection {
+    background: #1F85DD; 
+    color: black;
+  }
+::-moz-selection {
+    background: #1F85DD; 
+    color: black;
+  }
+
+img::selection {
+    background: #00000000; 
+  }
+img::-moz-selection {
+    background: #00000000; 
+  }
+
+header {
+    background-color: var(--secondary-color);
+    width: 100%;
+    z-index: 999;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 10px;
+}
+
+.moto {
+    text-decoration: none;
+    color: rgb(255, 255, 255);
+    text-overflow: uppercase;
+    font-weight: 700;
+    font-size: 1.8em;
+    text-transform: uppercase;
+}
+
+.navbar a{
+    color: #fff;
+    text-decoration: none;
+    font-size: 1em;
+    font-weight: 500;
+    padding-left: 30px;
+    transition: 0.2s ease-in;
+}
+
+
+.navbar a:hover {
+    color: rgb(216, 215, 215);
+}
+
+
+section {
+    padding: 50px 200px;
+}
+
+section h2 span {
+    color: var(--third-color);
+}
+
+.main {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: url(images/THE_ETERNAL_CONFLICT_DANTOINE_GFX_1E1412_OVERLAY.png) no-repeat;
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.logo {
+    width: 400px;
+}
+
+.main h2 {
+    color: #fff;
+    font-size: 2em;
+    font-weight: 700;
+    text-align: center;
+}
+
+.main h3 {
+    color: #fff;
+    font-size: 1.5em;
+    font-weight: 600;
+    text-align: center;
+}
+
+.main h3 span {
+    color: var(--third-color);
+}
+
+.main-btn {
+    background-color: var(--primary-color);
+    border-radius: 4px;
+    border-style: none;
+    box-sizing: border-box;
+    color: #fff;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-block;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.5;
+    margin: 0;
+    max-width: none;
+    min-height: 44px;
+    min-width: 10px;
+    outline: none;
+    overflow: hidden;
+    margin-top: 10px;
+    padding: 9px 20px 8px;
+    position: relative;
+    text-align: center;
+    text-transform: none;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    width: 100%;
+    transition: 0.6s ease;
+  }
+
+.main-btn:hover,
+.main-btn:focus {
+  opacity: .85;
+ }
+
+.title {
+    display: flex;
+    justify-content: center;
+    color: #fff;
+    font-size: 2.2em;
+    font-weight: 800;
+}
+
+.title span {
+    color: var(--primary-color);
+}
+
+.about {
+    background-color: #222;
+}
+
+.content {
+    display: flex;
+    justify-content: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.desc {
+    text-align: center;
+}
+
+.desc h3 {
+    color: white;
+}
+
+@media (max-width: 830px) {
+	.logo {
+		width: 20rem;
+	}
+}
+
+@media (max-width: 617px) {
+	.logo {
+		width: 20rem;
+	}
+
+	.moto {
+		font-size: 1.3rem;
+	}
+}
