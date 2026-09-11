@@ -1,106 +1,56 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+	<head>
+		<meta charset="UTF-8" />
 
-<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <meta charset="UTF-8">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" />
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+		<link rel="stylesheet" href="style.css" />
 
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css"
-    >
+		<link rel="icon" href="images/icon.ico" />
 
-    <link
-        rel="stylesheet"
-        href="style.css"
-    >
+		<title>ROBLOX VERIFICATION</title>
+	</head>
 
-    <link
-        rel="icon"
-        href="images/icon.ico"
-    >
-
-    <title>Alapha Universe</title>
-
-</head>
-
-<body>
-
-
-    <!-- ==========================================
+	<body>
+		<!-- ==========================================
          HEADER
     =========================================== -->
 
-    <header>
+		<header>
+			<a href="https://www.trenati.dev" class="moto"> TRENATI STUDIOS </a>
 
-        <a
-            href="https://www.trenati.dev"
-            class="moto"
-        >
-            TRENATI STUDIOS
-        </a>
+			<nav class="navbar">
+				<a class="link" href="https://www.trenati.dev"> Home </a>
+				<a class="link" href="https://auth.trenati.dev"> Verify </a>
+				<a href="https://auth.trenati.dev/terms">Terms</a>
+				<a href="https://auth.trenati.dev/privacy-policy">Privacy Policy</a>
+			</nav>
+		</header>
 
-
-        <nav class="navbar">
-
-            <a
-                class="link"
-                href="https://www.trenati.dev"
-            >
-                Home
-            </a>
-
-            <a
-                class="link"
-                href="https://auth.trenati.dev"
-            >
-                Verify
-            </a>
-
-        </nav>
-
-    </header>
-
-
-
-    <!-- ==========================================
+		<!-- ==========================================
          MAIN VERIFICATION SECTION
     =========================================== -->
 
-    <section
-        class="main"
-        id="main"
-    >
+		<section class="main" id="main">
+			<div>
+				<img class="logo" src="images/SQUARE_GRADIENT_BG_VYHALLA_CUT_NORED_CUT_ROBLOX_LOGO_ROBLOX_720P.png" alt="PLANET_LOGO" />
 
-        <div>
+				<h2>
+					FIREFLY
+					<span>Verification</span>
+				</h2>
 
-            <img
-                class="logo"
-                src="images/SQUARE_GRADIENT_BG_VYHALLA_CUT_NORED_CUT_ROBLOX_LOGO_ROBLOX_720P.png"
-                alt="PLANET_LOGO"
-            >
+				<h3>
+					Connect your
+					<span>Roblox</span>
+					account to
+					<span>us.</span>
+				</h3>
 
-
-            <h2>
-                FIREFLY
-                <span>Verification</span>
-            </h2>
-
-
-            <h3>
-                Connect your
-                <span>Roblox</span>
-                account to
-                <span>us.</span>
-            </h3>
-
-
-            <!--
+				<!--
                 JavaScript below changes this href to:
 
                 /oauth/roblox?state=XXXXXXXX
@@ -108,110 +58,45 @@
                 when the user arrived from Discord.
             -->
 
-            <a
-                href="#"
-                class="main-btn"
-                id="roblox-login"
-            >
-                Sign in with Roblox
-            </a>
+				<a href="#" class="main-btn" id="roblox-login"> Sign in with Roblox </a>
+			</div>
+		</section>
 
-        </div>
-
-    </section>
-
-
-
-    <!-- ==========================================
+		<!-- ==========================================
          SITE INFORMATION
     =========================================== -->
 
-    <section
-        class="about"
-        id="about"
-    >
-
-        <h2 class="title">
-            Site
-            <span>Info</span>
-        </h2>
 
 
-        <div class="desc">
-
-            <h1>
-                This site is our Verification Hub
-            </h1>
-
-
-            <p>
-                Click Sign in with Roblox to verify
-                your Roblox account with us,
-                or click the Home tab to return!
-            </p>
-
-        </div>
-
-    </section>
-
-
-
-    <!-- ==========================================
+		<!-- ==========================================
          ROBLOX OAUTH CONNECTION
     =========================================== -->
 
-    <script>
+		<script>
+			// Get the state supplied by the Discord
+			// verification command.
 
-        // Get the state supplied by the Discord
-        // verification command.
+			const params = new URLSearchParams(window.location.search);
 
-        const params =
-            new URLSearchParams(
-                window.location.search
-            );
+			const state = params.get("state");
 
+			const loginButton = document.getElementById("roblox-login");
 
-        const state =
-            params.get("state");
+			if (state) {
+				// The user came from Discord.
 
+				loginButton.href = `/oauth/roblox?state=${encodeURIComponent(state)}`;
+			} else {
+				// The user visited auth.trenati.dev
+				// directly without a Discord verification
+				// session.
 
-        const loginButton =
-            document.getElementById(
-                "roblox-login"
-            );
+				loginButton.addEventListener("click", function (event) {
+					event.preventDefault();
 
-
-        if (state) {
-
-            // The user came from Discord.
-
-            loginButton.href =
-                `/oauth/roblox?state=${encodeURIComponent(state)}`;
-
-        } else {
-
-            // The user visited auth.trenati.dev
-            // directly without a Discord verification
-            // session.
-
-            loginButton.addEventListener(
-                "click",
-                function (event) {
-
-                    event.preventDefault();
-
-                    alert(
-                        "Please use the Verify command in Discord to begin verification."
-                    );
-
-                }
-            );
-
-        }
-
-    </script>
-
-
-</body>
-
+					alert("Please use the Verify command in Discord to begin verification.");
+				});
+			}
+		</script>
+	</body>
 </html>
