@@ -1,5 +1,110 @@
 @import url('https://fonts.googleapis.com/css?family=Exo:400,700');
 
+/* ======================================================
+   LEGAL PAGES
+   ====================================================== */
+
+.legal {
+    min-height: calc(100vh - 60px);
+    background-color: var(--primary-color);
+    padding: 70px 200px;
+}
+
+.legal-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.legal .title {
+    text-align: left;
+    justify-content: flex-start;
+    margin-bottom: 10px;
+}
+
+.legal .title span {
+    color: var(--third-color);
+}
+
+.legal-updated {
+    color: rgb(150, 150, 150);
+    font-size: 0.95em;
+    margin-bottom: 45px;
+}
+
+.legal-container h2 {
+    color: var(--third-color);
+    font-size: 1.6em;
+    margin-top: 40px;
+    margin-bottom: 15px;
+}
+
+.legal-container h3 {
+    color: #fff;
+    font-size: 1.25em;
+    margin-top: 25px;
+    margin-bottom: 10px;
+}
+
+.legal-container p,
+.legal-container li {
+    color: rgb(220, 220, 220);
+    font-size: 1em;
+    line-height: 1.8;
+}
+
+.legal-container p {
+    margin-bottom: 18px;
+}
+
+.legal-container ul {
+    padding-left: 30px;
+    margin-bottom: 20px;
+}
+
+.legal-container li {
+    margin-bottom: 8px;
+}
+
+
+/* ======================================================
+   LEGAL PAGE RESPONSIVE
+   ====================================================== */
+
+@media (max-width: 830px) {
+
+    .legal {
+        padding: 60px 60px;
+    }
+
+}
+
+
+@media (max-width: 617px) {
+
+    .legal {
+        padding: 45px 25px;
+    }
+
+    .legal .title {
+        font-size: 1.8em;
+    }
+
+    .legal-container h2 {
+        font-size: 1.4em;
+    }
+
+    .legal-container h3 {
+        font-size: 1.15em;
+    }
+
+    .legal-container p,
+    .legal-container li {
+        font-size: 0.95em;
+    }
+
+}
+
+
 *{
     font-family: 'Exo', sans-serif;
     margin: 0px;
