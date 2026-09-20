@@ -1,1172 +1,664 @@
-const {
-    SlashCommandBuilder,
-    ContainerBuilder,
-    ModalBuilder,
-    TextInputBuilder,
-    TextInputStyle,
-    ButtonStyle,
-    MessageFlags,
-    ActionRowBuilder,
-    ButtonBuilder,
-    ComponentType,
-    EmbedBuilder
-} = require("discord.js");
+const { SlashCommandBuilder, ContainerBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonStyle, MessageFlags, ActionRowBuilder, ButtonBuilder, ComponentType, EmbedBuilder } = require("discord.js");
 
 require("dotenv").config();
 
 const crypto = require("crypto");
 const https = require("https");
 
-const {
-    verify_container
-} = require("./embeds/verify.js");
+const { verify_container } = require("./embeds/verify.js");
 
 const groupRoleMap = require("../../verify-services/groupRoleMap");
-
 
 // ============================================================
 // ROBLOX AVATAR
 // ============================================================
 
 function fetchAvatar(userId) {
+	return new Promise((resolve) => {
+		const url = `https://thumbnails.roblox.com/v1/users/avatar-headshot?` + `userIds=${userId}` + `&size=150x150` + `&format=Png` + `&isCircular=true`;
 
-    return new Promise((resolve) => {
+		https
+			.get(url, (res) => {
+				let data = "";
 
-        const url =
-            `https://thumbnails.roblox.com/v1/users/avatar-headshot?` +
-            `userIds=${userId}` +
-            `&size=150x150` +
-            `&format=Png` +
-            `&isCircular=true`;
+				res.on("data", (chunk) => {
+					data += chunk;
+				});
 
-        https
-            .get(url, (res) => {
+				res.on("end", () => {
+					try {
+						const json = JSON.parse(data);
 
-                let data = "";
+						const imageUrl = json.data?.[0]?.imageUrl || null;
 
-                res.on("data", (chunk) => {
-                    data += chunk;
-                });
-
-                res.on("end", () => {
-
-                    try {
-
-                        const json =
-                            JSON.parse(data);
-
-                        const imageUrl =
-                            json.data?.[0]?.imageUrl || null;
-
-                        resolve(imageUrl);
-
-                    } catch {
-
-                        resolve(null);
-
-                    }
-
-                });
-
-            })
-            .on("error", () => {
-
-                resolve(null);
-
-            });
-
-    });
-
+						resolve(imageUrl);
+					} catch {
+						resolve(null);
+					}
+				});
+			})
+			.on("error", () => {
+				resolve(null);
+			});
+	});
 }
-
 
 // ============================================================
 // GROUP ROLE ASSIGNMENT
 // ============================================================
 
-async function assignRolesForUser(
-    interaction,
-    guildId,
-    robloxId,
-    robloxUsername,
-    noblox
-) {
+async function assignRolesForUser(interaction, guildId, robloxId, robloxUsername, noblox) {
+	const guildGroupMap = groupRoleMap[guildId];
 
-    const guildGroupMap =
-        groupRoleMap[guildId];
+	if (!guildGroupMap) {
+		return robloxUsername;
+	}
 
-    if (!guildGroupMap) {
+	let chosenPrefix = "";
 
-        return robloxUsername;
+	for (const [groupId, rankToRoles] of Object.entries(guildGroupMap)) {
+		try {
+			const rank = await noblox.getRankInGroup(Number(groupId), robloxId);
 
-    }
+			const roleEntries = rankToRoles[rank];
 
-    let chosenPrefix = "";
+			if (!Array.isArray(roleEntries)) {
+				continue;
+			}
 
-    for (
-        const [groupId, rankToRoles]
-        of Object.entries(guildGroupMap)
-    ) {
+			for (const entry of roleEntries) {
+				const role = interaction.guild.roles.cache.get(entry.id);
 
-        try {
+				if (role && !interaction.member.roles.cache.has(role.id)) {
+					await interaction.member.roles.add(role).catch(() => {});
+				}
 
-            const rank =
-                await noblox.getRankInGroup(
-                    Number(groupId),
-                    robloxId
-                );
+				if (entry.prefix && !chosenPrefix) {
+					chosenPrefix = entry.prefix;
+				}
+			}
+		} catch {}
+	}
 
-            const roleEntries =
-                rankToRoles[rank];
-
-            if (!Array.isArray(roleEntries)) {
-                continue;
-            }
-
-            for (const entry of roleEntries) {
-
-                const role =
-                    interaction.guild.roles.cache.get(
-                        entry.id
-                    );
-
-                if (
-                    role &&
-                    !interaction.member.roles.cache.has(
-                        role.id
-                    )
-                ) {
-
-                    await interaction.member
-                        .roles
-                        .add(role)
-                        .catch(() => {});
-
-                }
-
-                if (
-                    entry.prefix &&
-                    !chosenPrefix
-                ) {
-
-                    chosenPrefix =
-                        entry.prefix;
-
-                }
-
-            }
-
-        } catch {}
-
-    }
-
-    return chosenPrefix + robloxUsername;
-
+	return chosenPrefix + robloxUsername;
 }
-
 
 // ============================================================
 // COMMAND
 // ============================================================
 
 module.exports = {
+	data: new SlashCommandBuilder()
 
-    data: new SlashCommandBuilder()
+		.setName("verify")
 
-        .setName("verify")
+		.setDescription("Verify your account with our services.")
+		.addBooleanOption(option =>
+				option
+					.setName("reverify")
+					.setDescription(
+						"Force a new verification session."
+					)
+					.setRequired(false)
+			),
+	subdata: {
+		cooldown: 3,
+	},
 
-        .setDescription(
-            "Verify your account with our services."
-        ),
+	async execute(interaction, noblox, admin) {
+		const db = admin.database();
 
+		const reverify = interaction.options.getBoolean("reverify") ?? false;
+		const discordId = interaction.user.id;
 
-    subdata: {
-        cooldown: 3
-    },
+		const guildId = interaction.guild.id;
 
+		// ====================================================
+		// FIREBASE USER REFERENCE
+		// ====================================================
 
-    async execute(interaction, noblox, admin) {
+		const ref = db.ref("system").child("user_verification").child(`discord_${discordId}`);
 
-        const db =
-            admin.database();
+		try {
+			// =================================================
+			// CHECK EXISTING FIREBASE RECORD
+			// =================================================
 
-        const discordId =
-            interaction.user.id;
+			if (existingSnapshot.exists()) {
 
-        const guildId =
-            interaction.guild.id;
+				const existing =
+					existingSnapshot.val();
 
+				if (
+					existing.verified === true &&
+					existing.robloxUsername &&
+					!reverify
+				) {
 
-        // ====================================================
-        // FIREBASE USER REFERENCE
-        // ====================================================
+					return interaction.reply({
 
-        const ref =
-            db
-                .ref("system")
-                .child("user_verification")
-                .child(`discord_${discordId}`);
+						content:
+							`You’ve already linked your Discord account to **${existing.robloxUsername}**. Try again with the verify commands's reverify field set to **true** if you wish to reverify.`,
 
+						ephemeral: true
 
-        try {
+					});
 
-            // =================================================
-            // CHECK EXISTING FIREBASE RECORD
-            // =================================================
+				}
 
-            const existingSnapshot =
-                await ref.get();
+			}
 
+			// =================================================
+			// GENERATE WEBSITE STATE
+			// =================================================
 
-            if (existingSnapshot.exists()) {
+			const state = crypto.randomBytes(32).toString("hex");
 
-                const existing =
-                    existingSnapshot.val();
+			// =================================================
+			// CREATE / RESET VERIFICATION SESSION
+			// =================================================
 
-                if (
-                    existing.verified === true &&
-                    existing.robloxUsername
-                ) {
+			await ref.update({
+				verificationGuildID: guildId,
 
-                    return interaction.reply({
+				verified: false,
 
-                        content:
-                            `You’ve already linked your Discord account to **${existing.robloxUsername}**.`,
+				statecode: state,
 
-                        ephemeral: true
+				discordID: discordId,
 
-                    });
+				verificationMethod: null,
 
-                }
+				robloxID: null,
 
-            }
+				robloxUsername: null,
 
+				robloxDisplayName: null,
 
-            // =================================================
-            // GENERATE WEBSITE STATE
-            // =================================================
+				robloxProfile: null,
 
-            const state =
-                crypto
-                    .randomBytes(32)
-                    .toString("hex");
+				verificationCode: null,
 
+				verifiedAt: null,
+			});
 
-            // =================================================
-            // CREATE / RESET VERIFICATION SESSION
-            // =================================================
+			// =================================================
+			// INITIAL VERIFICATION MESSAGE
+			// =================================================
 
-            await ref.update({
+			await interaction.reply({
+				components: [
+					new ContainerBuilder()
 
-                verificationGuildID:
-                    guildId,
+						.setAccentColor(0x0099ff)
 
-                verified:
-                    false,
+						// =====================================
+						// HEADER
+						// =====================================
 
-                statecode:
-                    state,
+						.addTextDisplayComponents((textDisplay) => textDisplay.setContent("# Verify"))
 
-                discordID:
-                    discordId,
+						.addSeparatorComponents((separator) => separator)
 
-                verificationMethod:
-                    null,
+						// =====================================
+						// WEBSITE
+						// =====================================
 
-                robloxID:
-                    null,
+						.addSectionComponents((section) =>
+							section
 
-                robloxUsername:
-                    null,
+								.addTextDisplayComponents((textDisplay) => textDisplay.setContent("## Roblox Account Verifier\n" + "Verify your Roblox account using our website."))
 
-                robloxDisplayName:
-                    null,
+								.setButtonAccessory((button) =>
+									button
 
-                robloxProfile:
-                    null,
+										.setLabel("Verify with Website")
 
-                verificationCode:
-                    null,
+										.setStyle(ButtonStyle.Link)
 
-                verifiedAt:
-                    null
+										.setURL(`https://auth.trenati.dev/?state=${encodeURIComponent(state)}`),
+								),
+						)
 
-            });
+						.addSeparatorComponents((separator) => separator)
 
+						// =====================================
+						// USER DESCRIPTION
+						// =====================================
 
-            // =================================================
-            // INITIAL VERIFICATION MESSAGE
-            // =================================================
+						.addSectionComponents((section) =>
+							section
 
-            await interaction.reply({
+								.addTextDisplayComponents((textDisplay) => textDisplay.setContent("## User Description\n" + "Verify by placing a verification code in your Roblox About Me."))
 
-                components: [
+								.setButtonAccessory((button) =>
+									button
 
-                    new ContainerBuilder()
+										.setCustomId("verify_description")
 
-                        .setAccentColor(
-                            0x0099ff
-                        )
+										.setLabel("Verify with User Description")
 
+										.setStyle(ButtonStyle.Primary),
+								),
+						),
+				],
 
-                        // =====================================
-                        // HEADER
-                        // =====================================
+				ephemeral: true,
 
-                        .addTextDisplayComponents(
-                            textDisplay =>
-                                textDisplay.setContent(
-                                    "# Verify"
-                                )
-                        )
+				flags: MessageFlags.IsComponentsV2,
 
+				withResponse: false,
+			});
 
-                        .addSeparatorComponents(
-                            separator =>
-                                separator
-                        )
+			// =================================================
+			// GET MESSAGE
+			// =================================================
 
+			const message = await interaction.fetchReply();
 
-                        // =====================================
-                        // WEBSITE
-                        // =====================================
+			// =================================================
+			// WAIT FOR DESCRIPTION BUTTON
+			// =================================================
 
-                        .addSectionComponents(
-                            section =>
-                                section
+			const descriptionButton = await message
+				.awaitMessageComponent({
+					componentType: ComponentType.Button,
 
-                                    .addTextDisplayComponents(
-                                        textDisplay =>
-                                            textDisplay.setContent(
-                                                "## Roblox Account Verifier\n" +
-                                                "Verify your Roblox account using our website."
-                                            )
-                                    )
+					time: 120000,
 
-                                    .setButtonAccessory(
-                                        button =>
-                                            button
+					filter: (componentInteraction) => componentInteraction.user.id === discordId && componentInteraction.customId === "verify_description",
+				})
+				.catch(() => null);
 
-                                                .setLabel(
-                                                    "Verify with Website"
-                                                )
+			// =================================================
+			// NO DESCRIPTION BUTTON
+			//
+			// This is normal if they use the website instead.
+			// =================================================
 
-                                                .setStyle(
-                                                    ButtonStyle.Link
-                                                )
+			if (!descriptionButton) {
+				return;
+			}
 
-                                                .setURL(
-                                                    `https://auth.trenati.dev/?state=${encodeURIComponent(state)}`
-                                                )
-                                    )
-                        )
+			// =================================================
+			// DESCRIPTION MODAL
+			// =================================================
 
+			const modal = new ModalBuilder()
 
-                        .addSeparatorComponents(
-                            separator =>
-                                separator
-                        )
+				.setCustomId("verify_description_modal")
 
+				.setTitle("Verify with User Description");
 
-                        // =====================================
-                        // USER DESCRIPTION
-                        // =====================================
+			const usernameInput = new TextInputBuilder()
 
-                        .addSectionComponents(
-                            section =>
-                                section
+				.setCustomId("roblox_username")
 
-                                    .addTextDisplayComponents(
-                                        textDisplay =>
-                                            textDisplay.setContent(
-                                                "## User Description\n" +
-                                                "Verify by placing a verification code in your Roblox About Me."
-                                            )
-                                    )
+				.setLabel("Roblox Username")
 
-                                    .setButtonAccessory(
-                                        button =>
-                                            button
+				.setPlaceholder("Enter your Roblox username")
 
-                                                .setCustomId(
-                                                    "verify_description"
-                                                )
+				.setStyle(TextInputStyle.Short)
 
-                                                .setLabel(
-                                                    "Verify with User Description"
-                                                )
+				.setRequired(true)
 
-                                                .setStyle(
-                                                    ButtonStyle.Primary
-                                                )
-                                    )
-                        )
+				.setMinLength(3)
 
-                ],
+				.setMaxLength(20);
 
-                ephemeral:
-                    true,
+			modal.addComponents(new ActionRowBuilder().addComponents(usernameInput));
 
-                flags:
-                    MessageFlags.IsComponentsV2,
+			await descriptionButton.showModal(modal);
 
-                withResponse:
-                    false
+			// =================================================
+			// WAIT FOR MODAL
+			// =================================================
 
-            });
+			const modalSubmit = await descriptionButton
+				.awaitModalSubmit({
+					time: 120000,
 
+					filter: (modalInteraction) => modalInteraction.user.id === discordId && modalInteraction.customId === "verify_description_modal",
+				})
+				.catch(() => null);
 
-            // =================================================
-            // GET MESSAGE
-            // =================================================
+			if (!modalSubmit) {
+				return;
+			}
 
-            const message =
-                await interaction.fetchReply();
+			await modalSubmit.deferReply({
+				ephemeral: true,
+			});
 
+			// =================================================
+			// GET ROBLOX USERNAME
+			// =================================================
 
-            // =================================================
-            // WAIT FOR DESCRIPTION BUTTON
-            // =================================================
+			const username = modalSubmit.fields.getTextInputValue("roblox_username").trim();
 
-            const descriptionButton =
-                await message
-                    .awaitMessageComponent({
+			// =================================================
+			// GET ROBLOX USER ID
+			// =================================================
 
-                        componentType:
-                            ComponentType.Button,
+			let userId;
 
-                        time:
-                            120000,
+			try {
+				userId = await noblox.getIdFromUsername(username);
+			} catch {
+				return modalSubmit.editReply({
+					content: `Could not find Roblox user **"${username}"**.`,
+				});
+			}
 
-                        filter:
-                            (componentInteraction) =>
+			// =================================================
+			// GENERATE DESCRIPTION CODE
+			// =================================================
 
-                                componentInteraction.user.id ===
-                                    discordId &&
+			const verificationCode = `VER-${crypto.randomBytes(2).toString("hex").toUpperCase()}`;
 
-                                componentInteraction.customId ===
-                                    "verify_description"
+			// =================================================
+			// UPDATE SAME FIREBASE RECORD
+			// =================================================
 
-                    })
-                    .catch(() => null);
+			await ref.update({
+				verificationMethod: "description",
 
+				robloxID: String(userId),
 
-            // =================================================
-            // NO DESCRIPTION BUTTON
-            //
-            // This is normal if they use the website instead.
-            // =================================================
+				robloxUsername: username,
 
-            if (!descriptionButton) {
+				verificationCode: verificationCode,
 
-                return;
+				verified: false,
+			});
 
-            }
+			// =================================================
+			// AVATAR
+			// =================================================
 
+			const avatarUrl = await fetchAvatar(userId);
 
-            // =================================================
-            // DESCRIPTION MODAL
-            // =================================================
+			// =================================================
+			// DESCRIPTION VERIFICATION EMBED
+			// =================================================
 
-            const modal =
-                new ModalBuilder()
+			const verifyEmbed = new EmbedBuilder()
 
-                    .setCustomId(
-                        "verify_description_modal"
-                    )
+				.setTitle("Verification Process")
 
-                    .setTitle(
-                        "Verify with User Description"
-                    );
+				.setColor("DarkBlue")
 
+				.setDescription(`To verify that **${username}** is your Roblox account:\n\n` + `1. Visit [**your profile**](https://www.roblox.com/users/${userId}/profile)\n` + `2. Add this code to your **About Me**:\n` + `\`\`\`${verificationCode}\`\`\`\n` + `3. Click **Confirm** below once you've done it.`)
 
-            const usernameInput =
-                new TextInputBuilder()
+				.setThumbnail(avatarUrl)
 
-                    .setCustomId(
-                        "roblox_username"
-                    )
+				.setFooter({
+					text: interaction.client.user.username,
 
-                    .setLabel(
-                        "Roblox Username"
-                    )
+					icon_url: interaction.client.user.displayAvatarURL({
+						format: "png",
 
-                    .setPlaceholder(
-                        "Enter your Roblox username"
-                    )
+						dynamic: true,
+					}),
+				})
 
-                    .setStyle(
-                        TextInputStyle.Short
-                    )
+				.setTimestamp();
 
-                    .setRequired(
-                        true
-                    )
+			// =================================================
+			// CONFIRM BUTTON
+			// =================================================
 
-                    .setMinLength(
-                        3
-                    )
+			const confirmRow = new ActionRowBuilder().addComponents(
+				new ButtonBuilder()
 
-                    .setMaxLength(
-                        20
-                    );
+					.setCustomId("verify_confirm")
 
+					.setLabel("Confirm")
 
-            modal.addComponents(
+					.setStyle(ButtonStyle.Primary),
+			);
 
-                new ActionRowBuilder()
-                    .addComponents(
-                        usernameInput
-                    )
+			await modalSubmit.editReply({
+				embeds: [verifyEmbed],
 
-            );
+				components: [confirmRow],
+			});
 
+			// =================================================
+			// GET DESCRIPTION MESSAGE
+			// =================================================
 
-            await descriptionButton.showModal(
-                modal
-            );
+			const descriptionMessage = await modalSubmit.fetchReply();
 
+			// =================================================
+			// WAIT FOR CONFIRM
+			// =================================================
 
-            // =================================================
-            // WAIT FOR MODAL
-            // =================================================
+			const confirmation = await descriptionMessage
+				.awaitMessageComponent({
+					componentType: ComponentType.Button,
 
-            const modalSubmit =
-                await descriptionButton
-                    .awaitModalSubmit({
+					time: 60000,
 
-                        time:
-                            120000,
+					filter: (componentInteraction) => componentInteraction.user.id === discordId && componentInteraction.customId === "verify_confirm",
+				})
+				.catch(() => null);
 
-                        filter:
-                            (modalInteraction) =>
+			// =================================================
+			// TIMEOUT
+			// =================================================
 
-                                modalInteraction.user.id ===
-                                    discordId &&
+			if (!confirmation) {
+				await ref
+					.update({
+						verificationMethod: null,
 
-                                modalInteraction.customId ===
-                                    "verify_description_modal"
+						robloxID: null,
 
-                    })
-                    .catch(() => null);
+						robloxUsername: null,
 
+						verificationCode: null,
+					})
+					.catch(() => {});
 
-            if (!modalSubmit) {
+				const timeoutEmbed = new EmbedBuilder()
 
-                return;
+					.setTitle("Timed Out")
 
-            }
+					.setDescription("You didn’t confirm in time. Start again with `/verify`.")
 
+					.setColor("#9D4D4D")
 
-            await modalSubmit.deferReply({
+					.setFooter({
+						text: interaction.client.user.username,
 
-                ephemeral:
-                    true
+						icon_url: interaction.client.user.displayAvatarURL({
+							format: "png",
 
-            });
+							dynamic: true,
+						}),
+					})
 
+					.setTimestamp();
 
-            // =================================================
-            // GET ROBLOX USERNAME
-            // =================================================
+				return modalSubmit.editReply({
+					embeds: [timeoutEmbed],
 
-            const username =
-                modalSubmit.fields
-                    .getTextInputValue(
-                        "roblox_username"
-                    )
-                    .trim();
+					components: [],
+				});
+			}
 
+			// =================================================
+			// DISABLE CONFIRM BUTTON
+			// =================================================
 
-            // =================================================
-            // GET ROBLOX USER ID
-            // =================================================
+			if (!confirmation.deferred && !confirmation.replied) {
+				await confirmation.deferUpdate().catch(() => {});
+			}
 
-            let userId;
+			await modalSubmit.editReply({
+				components: [new ActionRowBuilder().addComponents(ButtonBuilder.from(confirmRow.components[0]).setDisabled(true))],
+			});
 
-            try {
+			// =================================================
+			// READ FIREBASE RECORD
+			// =================================================
 
-                userId =
-                    await noblox.getIdFromUsername(
-                        username
-                    );
+			const verificationSnapshot = await ref.get();
 
-            } catch {
+			if (!verificationSnapshot.exists()) {
+				return modalSubmit.editReply({
+					content: "Your verification session could not be found.",
 
-                return modalSubmit.editReply({
+					embeds: [],
 
-                    content:
-                        `Could not find Roblox user **"${username}"**.`
+					components: [],
+				});
+			}
 
-                });
+			const verification = verificationSnapshot.val();
 
-            }
+			// =================================================
+			// VERIFY CODE STILL MATCHES
+			// =================================================
 
+			if (verification.verificationCode !== verificationCode) {
+				return modalSubmit.editReply({
+					content: "Your verification session is no longer valid.",
 
-            // =================================================
-            // GENERATE DESCRIPTION CODE
-            // =================================================
+					embeds: [],
 
-            const verificationCode =
-                `VER-${crypto
-                    .randomBytes(2)
-                    .toString("hex")
-                    .toUpperCase()}`;
+					components: [],
+				});
+			}
 
+			// =================================================
+			// GET ROBLOX DESCRIPTION
+			// =================================================
 
-            // =================================================
-            // UPDATE SAME FIREBASE RECORD
-            // =================================================
+			let blurb;
 
-            await ref.update({
+			try {
+				blurb = await noblox.getBlurb(userId);
+			} catch (error) {
+				console.warn("Could not retrieve Roblox description:", error);
 
-                verificationMethod:
-                    "description",
+				return modalSubmit.editReply({
+					content: "Could not retrieve the Roblox profile description. Please try again.",
 
-                robloxID:
-                    String(userId),
+					embeds: [],
 
-                robloxUsername:
-                    username,
+					components: [],
+				});
+			}
 
-                verificationCode:
-                    verificationCode,
+			// =================================================
+			// CHECK DESCRIPTION
+			// =================================================
 
-                verified:
-                    false
+			if (!blurb || !blurb.includes(verificationCode)) {
+				const failEmbed = new EmbedBuilder()
 
-            });
+					.setTitle("Verification Failed")
 
+					.setDescription("Make sure the code is in your Roblox profile and try again.")
 
-            // =================================================
-            // AVATAR
-            // =================================================
+					.setColor("#9D4D4D")
 
-            const avatarUrl =
-                await fetchAvatar(
-                    userId
-                );
+					.setFooter({
+						text: interaction.client.user.username,
 
+						icon_url: interaction.client.user.displayAvatarURL({
+							format: "png",
 
-            // =================================================
-            // DESCRIPTION VERIFICATION EMBED
-            // =================================================
+							dynamic: true,
+						}),
+					})
 
-            const verifyEmbed =
-                new EmbedBuilder()
+					.setTimestamp();
 
-                    .setTitle(
-                        "Verification Process"
-                    )
+				return modalSubmit.editReply({
+					embeds: [failEmbed],
 
-                    .setColor(
-                        "DarkBlue"
-                    )
+					components: [],
+				});
+			}
 
-                    .setDescription(
+			// =================================================
+			// ASSIGN GROUP ROLES
+			// =================================================
 
-                        `To verify that **${username}** is your Roblox account:\n\n` +
+			const finalNickname = await assignRolesForUser(interaction, guildId, userId, username, noblox);
 
-                        `1. Visit [**your profile**](https://www.roblox.com/users/${userId}/profile)\n` +
+			// =================================================
+			// UPDATE DISCORD NICKNAME
+			// =================================================
 
-                        `2. Add this code to your **About Me**:\n` +
+			await interaction.member.setNickname(finalNickname).catch(() => {});
 
-                        `\`\`\`${verificationCode}\`\`\`\n` +
+			// =================================================
+			// MARK FIREBASE VERIFIED
+			// =================================================
 
-                        `3. Click **Confirm** below once you've done it.`
+			await ref.update({
+				verified: true,
 
-                    )
+				verificationMethod: "description",
 
-                    .setThumbnail(
-                        avatarUrl
-                    )
+				robloxID: String(userId),
 
-                    .setFooter({
+				robloxUsername: username,
 
-                        text:
-                            interaction.client.user.username,
+				verificationCode: null,
 
-                        icon_url:
-                            interaction.client.user.displayAvatarURL({
+				statecode: null,
 
-                                format:
-                                    "png",
+				verifiedAt: Date.now(),
+			});
 
-                                dynamic:
-                                    true
+			// =================================================
+			// SUCCESS EMBED
+			// =================================================
 
-                            })
+			const successEmbed = new EmbedBuilder()
 
-                    })
+				.setTitle("Verification Successful")
 
-                    .setTimestamp();
+				.setColor("DarkBlue")
 
+				.setDescription(`Successfully linked Roblox user **${username}**.`)
 
-            // =================================================
-            // CONFIRM BUTTON
-            // =================================================
+				.setThumbnail(avatarUrl)
 
-            const confirmRow =
-                new ActionRowBuilder()
-                    .addComponents(
+				.setFooter({
+					text: interaction.client.user.username,
 
-                        new ButtonBuilder()
+					icon_url: interaction.client.user.displayAvatarURL({
+						format: "png",
 
-                            .setCustomId(
-                                "verify_confirm"
-                            )
+						dynamic: true,
+					}),
+				})
 
-                            .setLabel(
-                                "Confirm"
-                            )
+				.setTimestamp();
 
-                            .setStyle(
-                                ButtonStyle.Primary
-                            )
+			await modalSubmit.editReply({
+				embeds: [successEmbed],
 
-                    );
+				components: [],
+			});
+		} catch (error) {
+			console.warn("Verification command error:", error);
 
+			if (!interaction.replied && !interaction.deferred) {
+				await interaction
+					.reply({
+						content: "An error occurred while starting verification.",
 
-            await modalSubmit.editReply({
-
-                embeds: [
-                    verifyEmbed
-                ],
-
-                components: [
-                    confirmRow
-                ]
-
-            });
-
-
-            // =================================================
-            // GET DESCRIPTION MESSAGE
-            // =================================================
-
-            const descriptionMessage =
-                await modalSubmit.fetchReply();
-
-
-            // =================================================
-            // WAIT FOR CONFIRM
-            // =================================================
-
-            const confirmation =
-                await descriptionMessage
-                    .awaitMessageComponent({
-
-                        componentType:
-                            ComponentType.Button,
-
-                        time:
-                            60000,
-
-                        filter:
-                            (componentInteraction) =>
-
-                                componentInteraction.user.id ===
-                                    discordId &&
-
-                                componentInteraction.customId ===
-                                    "verify_confirm"
-
-                    })
-                    .catch(() => null);
-
-
-            // =================================================
-            // TIMEOUT
-            // =================================================
-
-            if (!confirmation) {
-
-                await ref.update({
-
-                    verificationMethod:
-                        null,
-
-                    robloxID:
-                        null,
-
-                    robloxUsername:
-                        null,
-
-                    verificationCode:
-                        null
-
-                }).catch(() => {});
-
-
-                const timeoutEmbed =
-                    new EmbedBuilder()
-
-                        .setTitle(
-                            "Timed Out"
-                        )
-
-                        .setDescription(
-                            "You didn’t confirm in time. Start again with `/verify`."
-                        )
-
-                        .setColor(
-                            "#9D4D4D"
-                        )
-
-                        .setFooter({
-
-                            text:
-                                interaction.client.user.username,
-
-                            icon_url:
-                                interaction.client.user.displayAvatarURL({
-
-                                    format:
-                                        "png",
-
-                                    dynamic:
-                                        true
-
-                                })
-
-                        })
-
-                        .setTimestamp();
-
-
-                return modalSubmit.editReply({
-
-                    embeds: [
-                        timeoutEmbed
-                    ],
-
-                    components: []
-
-                });
-
-            }
-
-
-            // =================================================
-            // DISABLE CONFIRM BUTTON
-            // =================================================
-
-            if (
-                !confirmation.deferred &&
-                !confirmation.replied
-            ) {
-
-                await confirmation
-                    .deferUpdate()
-                    .catch(() => {});
-
-            }
-
-
-            await modalSubmit.editReply({
-
-                components: [
-
-                    new ActionRowBuilder()
-                        .addComponents(
-
-                            ButtonBuilder
-                                .from(
-                                    confirmRow.components[0]
-                                )
-                                .setDisabled(
-                                    true
-                                )
-
-                        )
-
-                ]
-
-            });
-
-
-            // =================================================
-            // READ FIREBASE RECORD
-            // =================================================
-
-            const verificationSnapshot =
-                await ref.get();
-
-
-            if (!verificationSnapshot.exists()) {
-
-                return modalSubmit.editReply({
-
-                    content:
-                        "Your verification session could not be found.",
-
-                    embeds: [],
-
-                    components: []
-
-                });
-
-            }
-
-
-            const verification =
-                verificationSnapshot.val();
-
-
-            // =================================================
-            // VERIFY CODE STILL MATCHES
-            // =================================================
-
-            if (
-                verification.verificationCode !==
-                verificationCode
-            ) {
-
-                return modalSubmit.editReply({
-
-                    content:
-                        "Your verification session is no longer valid.",
-
-                    embeds: [],
-
-                    components: []
-
-                });
-
-            }
-
-
-            // =================================================
-            // GET ROBLOX DESCRIPTION
-            // =================================================
-
-            let blurb;
-
-            try {
-
-                blurb =
-                    await noblox.getBlurb(
-                        userId
-                    );
-
-            } catch (error) {
-
-                console.warn(
-                    "Could not retrieve Roblox description:",
-                    error
-                );
-
-                return modalSubmit.editReply({
-
-                    content:
-                        "Could not retrieve the Roblox profile description. Please try again.",
-
-                    embeds: [],
-
-                    components: []
-
-                });
-
-            }
-
-
-            // =================================================
-            // CHECK DESCRIPTION
-            // =================================================
-
-            if (
-                !blurb ||
-                !blurb.includes(
-                    verificationCode
-                )
-            ) {
-
-                const failEmbed =
-                    new EmbedBuilder()
-
-                        .setTitle(
-                            "Verification Failed"
-                        )
-
-                        .setDescription(
-                            "Make sure the code is in your Roblox profile and try again."
-                        )
-
-                        .setColor(
-                            "#9D4D4D"
-                        )
-
-                        .setFooter({
-
-                            text:
-                                interaction.client.user.username,
-
-                            icon_url:
-                                interaction.client.user.displayAvatarURL({
-
-                                    format:
-                                        "png",
-
-                                    dynamic:
-                                        true
-
-                                })
-
-                        })
-
-                        .setTimestamp();
-
-
-                return modalSubmit.editReply({
-
-                    embeds: [
-                        failEmbed
-                    ],
-
-                    components: []
-
-                });
-
-            }
-
-
-            // =================================================
-            // ASSIGN GROUP ROLES
-            // =================================================
-
-            const finalNickname =
-                await assignRolesForUser(
-                    interaction,
-                    guildId,
-                    userId,
-                    username,
-                    noblox
-                );
-
-
-            // =================================================
-            // UPDATE DISCORD NICKNAME
-            // =================================================
-
-            await interaction.member
-                .setNickname(
-                    finalNickname
-                )
-                .catch(() => {});
-
-
-            // =================================================
-            // MARK FIREBASE VERIFIED
-            // =================================================
-
-            await ref.update({
-
-                verified:
-                    true,
-
-                verificationMethod:
-                    "description",
-
-                robloxID:
-                    String(userId),
-
-                robloxUsername:
-                    username,
-
-                verificationCode:
-                    null,
-
-                statecode:
-                    null,
-
-                verifiedAt:
-                    Date.now()
-
-            });
-
-
-            // =================================================
-            // SUCCESS EMBED
-            // =================================================
-
-            const successEmbed =
-                new EmbedBuilder()
-
-                    .setTitle(
-                        "Verification Successful"
-                    )
-
-                    .setColor(
-                        "DarkBlue"
-                    )
-
-                    .setDescription(
-                        `Successfully linked Roblox user **${username}**.`
-                    )
-
-                    .setThumbnail(
-                        avatarUrl
-                    )
-
-                    .setFooter({
-
-                        text:
-                            interaction.client.user.username,
-
-                        icon_url:
-                            interaction.client.user.displayAvatarURL({
-
-                                format:
-                                    "png",
-
-                                dynamic:
-                                    true
-
-                            })
-
-                    })
-
-                    .setTimestamp();
-
-
-            await modalSubmit.editReply({
-
-                embeds: [
-                    successEmbed
-                ],
-
-                components: []
-
-            });
-
-
-        } catch (error) {
-
-            console.warn(
-                "Verification command error:",
-                error
-            );
-
-
-            if (
-                !interaction.replied &&
-                !interaction.deferred
-            ) {
-
-                await interaction.reply({
-
-                    content:
-                        "An error occurred while starting verification.",
-
-                    ephemeral:
-                        true
-
-                }).catch(() => {});
-
-            }
-
-        }
-
-    }
-
+						ephemeral: true,
+					})
+					.catch(() => {});
+			}
+		}
+	},
 };
