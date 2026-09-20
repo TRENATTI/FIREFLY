@@ -124,6 +124,8 @@ module.exports = {
 			// CHECK EXISTING FIREBASE RECORD
 			// =================================================
 
+			const existingSnapshot = await ref.get();
+
 			if (existingSnapshot.exists()) {
 
 				const existing =
@@ -138,7 +140,7 @@ module.exports = {
 					return interaction.reply({
 
 						content:
-							`You’ve already linked your Discord account to **${existing.robloxUsername}**. Try again with the verify commands's reverify field set to **true** if you wish to reverify.`,
+							`You’ve already linked your Discord account to **${existing.robloxUsername}**. Try again with the verify commands' reverify field set to **true** if you wish to reverify.`,
 
 						ephemeral: true
 
@@ -147,7 +149,7 @@ module.exports = {
 				}
 
 			}
-
+			
 			// =================================================
 			// GENERATE WEBSITE STATE
 			// =================================================
