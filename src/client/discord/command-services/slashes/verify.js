@@ -15,19 +15,13 @@ const {
 require("dotenv").config();
 
 const crypto = require("crypto");
+const https = require("https");
 
 const {
     verify_container
 } = require("./embeds/verify.js");
 
-const nobloxDefault = require("noblox.js");
-
-const db = (...args) =>
-    import("../../database-services/db.js").then(({ exec }) => exec(...args));
-
 const groupRoleMap = require("../../verify-services/groupRoleMap");
-
-const https = require("https");
 
 
 // ============================================================
@@ -35,11 +29,15 @@ const https = require("https");
 // ============================================================
 
 function fetchAvatar(userId) {
+
     return new Promise((resolve) => {
 
         const url =
             `https://thumbnails.roblox.com/v1/users/avatar-headshot?` +
-            `userIds=${userId}&size=150x150&format=Png&isCircular=true`;
+            `userIds=${userId}` +
+            `&size=150x150` +
+            `&format=Png` +
+            `&isCircular=true`;
 
         https
             .get(url, (res) => {
@@ -54,7 +52,8 @@ function fetchAvatar(userId) {
 
                     try {
 
-                        const json = JSON.parse(data);
+                        const json =
+                            JSON.parse(data);
 
                         const imageUrl =
                             json.data?.[0]?.imageUrl || null;
@@ -70,8 +69,14 @@ function fetchAvatar(userId) {
                 });
 
             })
-            .on("error", () => resolve(null));
+            .on("error", () => {
+
+                resolve(null);
+
+            });
+
     });
+
 }
 
 
@@ -83,23 +88,30 @@ async function assignRolesForUser(
     interaction,
     guildId,
     robloxId,
-    robloxUsername
+    robloxUsername,
+    noblox
 ) {
 
-    const guildGroupMap = groupRoleMap[guildId];
+    const guildGroupMap =
+        groupRoleMap[guildId];
 
     if (!guildGroupMap) {
+
         return robloxUsername;
+
     }
 
     let chosenPrefix = "";
 
-    for (const [groupId, rankToRoles] of Object.entries(guildGroupMap)) {
+    for (
+        const [groupId, rankToRoles]
+        of Object.entries(guildGroupMap)
+    ) {
 
         try {
 
             const rank =
-                await nobloxDefault.getRankInGroup(
+                await noblox.getRankInGroup(
                     Number(groupId),
                     robloxId
                 );
@@ -107,33 +119,38 @@ async function assignRolesForUser(
             const roleEntries =
                 rankToRoles[rank];
 
-            if (Array.isArray(roleEntries)) {
+            if (!Array.isArray(roleEntries)) {
+                continue;
+            }
 
-                for (const entry of roleEntries) {
+            for (const entry of roleEntries) {
 
-                    const role =
-                        interaction.guild.roles.cache.get(entry.id);
+                const role =
+                    interaction.guild.roles.cache.get(
+                        entry.id
+                    );
 
-                    if (
-                        role &&
-                        !interaction.member.roles.cache.has(role.id)
-                    ) {
+                if (
+                    role &&
+                    !interaction.member.roles.cache.has(
+                        role.id
+                    )
+                ) {
 
-                        await interaction.member
-                            .roles
-                            .add(role)
-                            .catch(() => {});
+                    await interaction.member
+                        .roles
+                        .add(role)
+                        .catch(() => {});
 
-                    }
+                }
 
-                    if (
-                        entry.prefix &&
-                        !chosenPrefix
-                    ) {
+                if (
+                    entry.prefix &&
+                    !chosenPrefix
+                ) {
 
-                        chosenPrefix = entry.prefix;
-
-                    }
+                    chosenPrefix =
+                        entry.prefix;
 
                 }
 
@@ -144,6 +161,7 @@ async function assignRolesForUser(
     }
 
     return chosenPrefix + robloxUsername;
+
 }
 
 
@@ -154,10 +172,13 @@ async function assignRolesForUser(
 module.exports = {
 
     data: new SlashCommandBuilder()
+
         .setName("verify")
+
         .setDescription(
             "Verify your account with our services."
         ),
+
 
     subdata: {
         cooldown: 3
@@ -166,7 +187,8 @@ module.exports = {
 
     async execute(interaction, noblox, admin) {
 
-        const firebase = admin.database();
+        const db =
+            admin.database();
 
         const discordId =
             interaction.user.id;
@@ -175,41 +197,54 @@ module.exports = {
             interaction.guild.id;
 
 
+        // ====================================================
+        // FIREBASE USER REFERENCE
+        // ====================================================
+
+        const ref =
+            db
+                .ref("system")
+                .child("user_verification")
+                .child(`discord_${discordId}`);
+
+
         try {
 
-            // ====================================================
-            // ALREADY LINKED CHECK
-            // ====================================================
+            // =================================================
+            // CHECK EXISTING FIREBASE RECORD
+            // =================================================
 
-            const linkedrows = await db(
-                `
-                SELECT *
-                FROM linked_accounts
-                WHERE discord_id = ?
-                `,
-                [discordId]
-            );
+            const existingSnapshot =
+                await ref.get();
 
-            const existing =
-                linkedrows[0] || null;
 
-            if (existing) {
+            if (existingSnapshot.exists()) {
 
-                return interaction.reply({
+                const existing =
+                    existingSnapshot.val();
 
-                    content:
-                        `You’ve already linked your Discord account to **${existing.roblox_username}**.`,
+                if (
+                    existing.verified === true &&
+                    existing.robloxUsername
+                ) {
 
-                    ephemeral: true
+                    return interaction.reply({
 
-                });
+                        content:
+                            `You’ve already linked your Discord account to **${existing.robloxUsername}**.`,
+
+                        ephemeral: true
+
+                    });
+
+                }
 
             }
 
 
-            // ====================================================
+            // =================================================
             // GENERATE WEBSITE STATE
-            // ====================================================
+            // =================================================
 
             const state =
                 crypto
@@ -217,15 +252,9 @@ module.exports = {
                     .toString("hex");
 
 
-            // ====================================================
-            // FIREBASE VERIFICATION RECORD
-            // ====================================================
-
-            const ref = firebase
-                .ref("system")
-                .child("user_verification")
-                .child(`discord_${discordId}`);
-
+            // =================================================
+            // CREATE / RESET VERIFICATION SESSION
+            // =================================================
 
             await ref.update({
 
@@ -239,14 +268,35 @@ module.exports = {
                     state,
 
                 discordID:
-                    discordId
+                    discordId,
+
+                verificationMethod:
+                    null,
+
+                robloxID:
+                    null,
+
+                robloxUsername:
+                    null,
+
+                robloxDisplayName:
+                    null,
+
+                robloxProfile:
+                    null,
+
+                verificationCode:
+                    null,
+
+                verifiedAt:
+                    null
 
             });
 
 
-            // ====================================================
+            // =================================================
             // INITIAL VERIFICATION MESSAGE
-            // ====================================================
+            // =================================================
 
             await interaction.reply({
 
@@ -254,12 +304,14 @@ module.exports = {
 
                     new ContainerBuilder()
 
-                        .setAccentColor(0x0099ff)
+                        .setAccentColor(
+                            0x0099ff
+                        )
 
 
-                        // ========================================
+                        // =====================================
                         // HEADER
-                        // ========================================
+                        // =====================================
 
                         .addTextDisplayComponents(
                             textDisplay =>
@@ -275,9 +327,9 @@ module.exports = {
                         )
 
 
-                        // ========================================
-                        // WEBSITE VERIFICATION
-                        // ========================================
+                        // =====================================
+                        // WEBSITE
+                        // =====================================
 
                         .addSectionComponents(
                             section =>
@@ -316,9 +368,9 @@ module.exports = {
                         )
 
 
-                        // ========================================
-                        // USER DESCRIPTION VERIFICATION
-                        // ========================================
+                        // =====================================
+                        // USER DESCRIPTION
+                        // =====================================
 
                         .addSectionComponents(
                             section =>
@@ -352,7 +404,8 @@ module.exports = {
 
                 ],
 
-                ephemeral: true,
+                ephemeral:
+                    true,
 
                 flags:
                     MessageFlags.IsComponentsV2,
@@ -363,15 +416,19 @@ module.exports = {
             });
 
 
-            // ====================================================
-            // WAIT FOR DESCRIPTION BUTTON
-            // ====================================================
+            // =================================================
+            // GET MESSAGE
+            // =================================================
 
             const message =
                 await interaction.fetchReply();
 
 
-            const confirmation =
+            // =================================================
+            // WAIT FOR DESCRIPTION BUTTON
+            // =================================================
+
+            const descriptionButton =
                 await message
                     .awaitMessageComponent({
 
@@ -382,35 +439,42 @@ module.exports = {
                             120000,
 
                         filter:
-                            (i) =>
-                                i.user.id === discordId &&
-                                i.customId ===
+                            (componentInteraction) =>
+
+                                componentInteraction.user.id ===
+                                    discordId &&
+
+                                componentInteraction.customId ===
                                     "verify_description"
 
                     })
                     .catch(() => null);
 
 
-            // ====================================================
-            // NO BUTTON PRESSED
-            // ====================================================
+            // =================================================
+            // NO DESCRIPTION BUTTON
+            //
+            // This is normal if they use the website instead.
+            // =================================================
 
-            if (!confirmation) {
+            if (!descriptionButton) {
 
                 return;
 
             }
 
 
-            // ====================================================
-            // SHOW ROBLOX USERNAME MODAL
-            // ====================================================
+            // =================================================
+            // DESCRIPTION MODAL
+            // =================================================
 
             const modal =
                 new ModalBuilder()
+
                     .setCustomId(
                         "verify_description_modal"
                     )
+
                     .setTitle(
                         "Verify with User Description"
                     );
@@ -418,57 +482,69 @@ module.exports = {
 
             const usernameInput =
                 new TextInputBuilder()
+
                     .setCustomId(
                         "roblox_username"
                     )
+
                     .setLabel(
                         "Roblox Username"
                     )
+
                     .setPlaceholder(
                         "Enter your Roblox username"
                     )
+
                     .setStyle(
                         TextInputStyle.Short
                     )
+
                     .setRequired(
                         true
                     )
+
                     .setMinLength(
                         3
                     )
+
                     .setMaxLength(
                         20
                     );
 
 
             modal.addComponents(
+
                 new ActionRowBuilder()
                     .addComponents(
                         usernameInput
                     )
+
             );
 
 
-            await confirmation.showModal(
+            await descriptionButton.showModal(
                 modal
             );
 
 
-            // ====================================================
-            // WAIT FOR MODAL SUBMISSION
-            // ====================================================
+            // =================================================
+            // WAIT FOR MODAL
+            // =================================================
 
             const modalSubmit =
-                await confirmation
+                await descriptionButton
                     .awaitModalSubmit({
 
                         time:
                             120000,
 
                         filter:
-                            (i) =>
-                                i.user.id === discordId &&
-                                i.customId ===
+                            (modalInteraction) =>
+
+                                modalInteraction.user.id ===
+                                    discordId &&
+
+                                modalInteraction.customId ===
                                     "verify_description_modal"
 
                     })
@@ -483,13 +559,16 @@ module.exports = {
 
 
             await modalSubmit.deferReply({
-                ephemeral: true
+
+                ephemeral:
+                    true
+
             });
 
 
-            // ====================================================
-            // GET USERNAME
-            // ====================================================
+            // =================================================
+            // GET ROBLOX USERNAME
+            // =================================================
 
             const username =
                 modalSubmit.fields
@@ -499,9 +578,9 @@ module.exports = {
                     .trim();
 
 
-            // ====================================================
-            // FIND ROBLOX USER
-            // ====================================================
+            // =================================================
+            // GET ROBLOX USER ID
+            // =================================================
 
             let userId;
 
@@ -524,49 +603,20 @@ module.exports = {
             }
 
 
-            // ====================================================
+            // =================================================
             // GENERATE DESCRIPTION CODE
-            // ====================================================
+            // =================================================
 
-            const code =
+            const verificationCode =
                 `VER-${crypto
                     .randomBytes(2)
                     .toString("hex")
                     .toUpperCase()}`;
 
 
-            // ====================================================
-            // STORE DESCRIPTION VERIFICATION
-            // ====================================================
-
-            await db(
-                `
-                INSERT INTO verifications
-                    (
-                        discord_id,
-                        roblox_id,
-                        roblox_username,
-                        code
-                    )
-                VALUES
-                    (?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE
-                    roblox_id = VALUES(roblox_id),
-                    roblox_username = VALUES(roblox_username),
-                    code = VALUES(code)
-                `,
-                [
-                    discordId,
-                    userId,
-                    username,
-                    code
-                ]
-            );
-
-
-            // ====================================================
-            // ALSO STORE CURRENT METHOD IN FIREBASE
-            // ====================================================
+            // =================================================
+            // UPDATE SAME FIREBASE RECORD
+            // =================================================
 
             await ref.update({
 
@@ -580,14 +630,17 @@ module.exports = {
                     username,
 
                 verificationCode:
-                    code
+                    verificationCode,
+
+                verified:
+                    false
 
             });
 
 
-            // ====================================================
+            // =================================================
             // AVATAR
-            // ====================================================
+            // =================================================
 
             const avatarUrl =
                 await fetchAvatar(
@@ -595,9 +648,9 @@ module.exports = {
                 );
 
 
-            // ====================================================
+            // =================================================
             // DESCRIPTION VERIFICATION EMBED
-            // ====================================================
+            // =================================================
 
             const verifyEmbed =
                 new EmbedBuilder()
@@ -611,15 +664,17 @@ module.exports = {
                     )
 
                     .setDescription(
+
                         `To verify that **${username}** is your Roblox account:\n\n` +
 
                         `1. Visit [**your profile**](https://www.roblox.com/users/${userId}/profile)\n` +
 
                         `2. Add this code to your **About Me**:\n` +
 
-                        `\`\`\`${code}\`\`\`\n` +
+                        `\`\`\`${verificationCode}\`\`\`\n` +
 
                         `3. Click **Confirm** below once you've done it.`
+
                     )
 
                     .setThumbnail(
@@ -647,11 +702,11 @@ module.exports = {
                     .setTimestamp();
 
 
-            // ====================================================
+            // =================================================
             // CONFIRM BUTTON
-            // ====================================================
+            // =================================================
 
-            const row =
+            const confirmRow =
                 new ActionRowBuilder()
                     .addComponents(
 
@@ -679,21 +734,25 @@ module.exports = {
                 ],
 
                 components: [
-                    row
+                    confirmRow
                 ]
 
             });
 
 
-            // ====================================================
-            // WAIT FOR CONFIRM
-            // ====================================================
+            // =================================================
+            // GET DESCRIPTION MESSAGE
+            // =================================================
 
             const descriptionMessage =
                 await modalSubmit.fetchReply();
 
 
-            const confirmationButton =
+            // =================================================
+            // WAIT FOR CONFIRM
+            // =================================================
+
+            const confirmation =
                 await descriptionMessage
                     .awaitMessageComponent({
 
@@ -704,28 +763,23 @@ module.exports = {
                             60000,
 
                         filter:
-                            (i) =>
-                                i.user.id ===
+                            (componentInteraction) =>
+
+                                componentInteraction.user.id ===
                                     discordId &&
 
-                                i.customId ===
+                                componentInteraction.customId ===
                                     "verify_confirm"
 
                     })
                     .catch(() => null);
 
 
-            // ====================================================
-            // TIMED OUT
-            // ====================================================
+            // =================================================
+            // TIMEOUT
+            // =================================================
 
-            if (!confirmationButton) {
-
-                await db(
-                    `DELETE FROM verifications WHERE discord_id = ?`,
-                    [discordId]
-                );
-
+            if (!confirmation) {
 
                 await ref.update({
 
@@ -793,16 +847,16 @@ module.exports = {
             }
 
 
-            // ====================================================
+            // =================================================
             // DISABLE CONFIRM BUTTON
-            // ====================================================
+            // =================================================
 
             if (
-                !confirmationButton.deferred &&
-                !confirmationButton.replied
+                !confirmation.deferred &&
+                !confirmation.replied
             ) {
 
-                await confirmationButton
+                await confirmation
                     .deferUpdate()
                     .catch(() => {});
 
@@ -818,7 +872,7 @@ module.exports = {
 
                             ButtonBuilder
                                 .from(
-                                    row.components[0]
+                                    confirmRow.components[0]
                                 )
                                 .setDisabled(
                                     true
@@ -831,348 +885,20 @@ module.exports = {
             });
 
 
-            // ====================================================
-            // CHECK ROBLOX DESCRIPTION
-            // ====================================================
+            // =================================================
+            // READ FIREBASE RECORD
+            // =================================================
 
-            try {
+            const verificationSnapshot =
+                await ref.get();
 
-                const blurb =
-                    await noblox.getBlurb(
-                        userId
-                    );
 
+            if (!verificationSnapshot.exists()) {
 
-                const pendingrows =
-                    await db(
-                        `
-                        SELECT *
-                        FROM verifications
-                        WHERE discord_id = ?
-                        `,
-                        [discordId]
-                    );
-
-
-                const pending =
-                    pendingrows[0] || null;
-
-
-                if (
-                    !pending ||
-                    !blurb.includes(
-                        pending.code
-                    )
-                ) {
-
-                    const failEmbed =
-                        new EmbedBuilder()
-
-                            .setTitle(
-                                "Verification Failed"
-                            )
-
-                            .setDescription(
-                                "Make sure the code is in your Roblox profile and try again."
-                            )
-
-                            .setColor(
-                                "#9D4D4D"
-                            )
-
-                            .setFooter({
-
-                                text:
-                                    interaction.client.user.username,
-
-                                icon_url:
-                                    interaction.client.user.displayAvatarURL({
-
-                                        format:
-                                            "png",
-
-                                        dynamic:
-                                            true
-
-                                    })
-
-                            })
-
-                            .setTimestamp();
-
-
-                    return modalSubmit.editReply({
-
-                        embeds: [
-                            failEmbed
-                        ],
-
-                        components: []
-
-                    });
-
-                }
-
-
-                // =================================================
-                // DELETE PENDING VERIFICATION
-                // =================================================
-
-                const result =
-                    await db(
-                        `
-                        DELETE FROM verifications
-                        WHERE discord_id = ?
-                        `,
-                        [discordId]
-                    );
-
-
-                console.log(
-                    `${result.affectedRows} row(s) deleted.`
-                );
-
-
-                // =================================================
-                // LINK ACCOUNT
-                // =================================================
-
-                await db(
-                    `
-                    INSERT INTO linked_accounts
-                        (
-                            discord_id,
-                            roblox_id,
-                            roblox_username
-                        )
-                    VALUES
-                        (?, ?, ?)
-                    ON DUPLICATE KEY UPDATE
-                        roblox_id = VALUES(roblox_id),
-                        roblox_username = VALUES(roblox_username)
-                    `,
-                    [
-                        discordId,
-                        userId,
-                        username
-                    ]
-                );
-
-
-                // =================================================
-                // ASSIGN GROUP ROLES
-                // =================================================
-
-                const finalNickname =
-                    await assignRolesForUser(
-                        interaction,
-                        guildId,
-                        userId,
-                        username
-                    );
-
-
-                await interaction.member
-                    .setNickname(
-                        finalNickname
-                    )
-                    .catch(() => {});
-
-
-                // =================================================
-                // LOG
-                // =================================================
-
-                const logChannelIds = [
-
-                    "1517324782964707530",
-                    "1517329798643581038",
-                    "1517329877978714254",
-                    "1517329973629947984",
-                    "1517330338630602822",
-                    "1383901410906734713"
-
-                ];
-
-
-                const logEmbed =
-                    new EmbedBuilder()
-
-                        .setTitle(
-                            "A user linked their Roblox account with Firefly"
-                        )
-
-                        .setColor(
-                            "DarkBlue"
-                        )
-
-                        .addFields(
-
-                            {
-                                name:
-                                    "Discord User",
-
-                                value:
-                                    `${interaction.user.tag} (ID: ||${interaction.user.id}||)`,
-
-                                inline:
-                                    true
-                            },
-
-                            {
-                                name:
-                                    "Roblox User",
-
-                                value:
-                                    `${username} (ID: [${userId}](https://www.roblox.com/users/${userId}/profile))`,
-
-                                inline:
-                                    true
-                            }
-
-                        )
-
-                        .setFooter({
-
-                            text:
-                                interaction.client.user.username,
-
-                            icon_url:
-                                interaction.client.user.displayAvatarURL({
-
-                                    format:
-                                        "png",
-
-                                    dynamic:
-                                        true
-
-                                })
-
-                        })
-
-                        .setTimestamp();
-
-
-                for (
-                    const channelId
-                    of logChannelIds
-                ) {
-
-                    const logChannel =
-                        interaction.client
-                            .channels
-                            .cache
-                            .get(channelId);
-
-
-                    if (!logChannel) {
-                        continue;
-                    }
-
-
-                    await logChannel
-                        .send({
-                            embeds: [
-                                logEmbed
-                            ]
-                        })
-                        .catch((err) => {
-
-                            console.warn(
-                                `Failed to send log to channel ${channelId}:`,
-                                err
-                            );
-
-                        });
-
-                }
-
-
-                // =================================================
-                // MARK FIREBASE VERIFIED
-                // =================================================
-
-                await ref.update({
-
-                    verified:
-                        true,
-
-                    verificationMethod:
-                        "description",
-
-                    robloxID:
-                        String(userId),
-
-                    robloxUsername:
-                        username,
-
-                    verificationCode:
-                        null
-
-                });
-
-
-                // =================================================
-                // SUCCESS
-                // =================================================
-
-                const successEmbed =
-                    new EmbedBuilder()
-
-                        .setTitle(
-                            "Verification Successful"
-                        )
-
-                        .setColor(
-                            "DarkBlue"
-                        )
-
-                        .setDescription(
-                            `Successfully linked Roblox user **${username}**.`
-                        )
-
-                        .setThumbnail(
-                            avatarUrl
-                        )
-
-                        .setFooter({
-
-                            text:
-                                interaction.client.user.username,
-
-                            icon_url:
-                                interaction.client.user.displayAvatarURL({
-
-                                    format:
-                                        "png",
-
-                                    dynamic:
-                                        true
-
-                                })
-
-                        })
-
-                        .setTimestamp();
-
-
-                await modalSubmit.editReply({
-
-                    embeds: [
-                        successEmbed
-                    ],
-
-                    components: []
-
-                });
-
-
-            } catch (err) {
-
-                await modalSubmit.editReply({
+                return modalSubmit.editReply({
 
                     content:
-                        `Could not complete verification.\n**Error:** ${err.message}`,
+                        "Your verification session could not be found.",
 
                     embeds: [],
 
@@ -1183,6 +909,237 @@ module.exports = {
             }
 
 
+            const verification =
+                verificationSnapshot.val();
+
+
+            // =================================================
+            // VERIFY CODE STILL MATCHES
+            // =================================================
+
+            if (
+                verification.verificationCode !==
+                verificationCode
+            ) {
+
+                return modalSubmit.editReply({
+
+                    content:
+                        "Your verification session is no longer valid.",
+
+                    embeds: [],
+
+                    components: []
+
+                });
+
+            }
+
+
+            // =================================================
+            // GET ROBLOX DESCRIPTION
+            // =================================================
+
+            let blurb;
+
+            try {
+
+                blurb =
+                    await noblox.getBlurb(
+                        userId
+                    );
+
+            } catch (error) {
+
+                console.warn(
+                    "Could not retrieve Roblox description:",
+                    error
+                );
+
+                return modalSubmit.editReply({
+
+                    content:
+                        "Could not retrieve the Roblox profile description. Please try again.",
+
+                    embeds: [],
+
+                    components: []
+
+                });
+
+            }
+
+
+            // =================================================
+            // CHECK DESCRIPTION
+            // =================================================
+
+            if (
+                !blurb ||
+                !blurb.includes(
+                    verificationCode
+                )
+            ) {
+
+                const failEmbed =
+                    new EmbedBuilder()
+
+                        .setTitle(
+                            "Verification Failed"
+                        )
+
+                        .setDescription(
+                            "Make sure the code is in your Roblox profile and try again."
+                        )
+
+                        .setColor(
+                            "#9D4D4D"
+                        )
+
+                        .setFooter({
+
+                            text:
+                                interaction.client.user.username,
+
+                            icon_url:
+                                interaction.client.user.displayAvatarURL({
+
+                                    format:
+                                        "png",
+
+                                    dynamic:
+                                        true
+
+                                })
+
+                        })
+
+                        .setTimestamp();
+
+
+                return modalSubmit.editReply({
+
+                    embeds: [
+                        failEmbed
+                    ],
+
+                    components: []
+
+                });
+
+            }
+
+
+            // =================================================
+            // ASSIGN GROUP ROLES
+            // =================================================
+
+            const finalNickname =
+                await assignRolesForUser(
+                    interaction,
+                    guildId,
+                    userId,
+                    username,
+                    noblox
+                );
+
+
+            // =================================================
+            // UPDATE DISCORD NICKNAME
+            // =================================================
+
+            await interaction.member
+                .setNickname(
+                    finalNickname
+                )
+                .catch(() => {});
+
+
+            // =================================================
+            // MARK FIREBASE VERIFIED
+            // =================================================
+
+            await ref.update({
+
+                verified:
+                    true,
+
+                verificationMethod:
+                    "description",
+
+                robloxID:
+                    String(userId),
+
+                robloxUsername:
+                    username,
+
+                verificationCode:
+                    null,
+
+                statecode:
+                    null,
+
+                verifiedAt:
+                    Date.now()
+
+            });
+
+
+            // =================================================
+            // SUCCESS EMBED
+            // =================================================
+
+            const successEmbed =
+                new EmbedBuilder()
+
+                    .setTitle(
+                        "Verification Successful"
+                    )
+
+                    .setColor(
+                        "DarkBlue"
+                    )
+
+                    .setDescription(
+                        `Successfully linked Roblox user **${username}**.`
+                    )
+
+                    .setThumbnail(
+                        avatarUrl
+                    )
+
+                    .setFooter({
+
+                        text:
+                            interaction.client.user.username,
+
+                        icon_url:
+                            interaction.client.user.displayAvatarURL({
+
+                                format:
+                                    "png",
+
+                                dynamic:
+                                    true
+
+                            })
+
+                    })
+
+                    .setTimestamp();
+
+
+            await modalSubmit.editReply({
+
+                embeds: [
+                    successEmbed
+                ],
+
+                components: []
+
+            });
+
+
         } catch (error) {
 
             console.warn(
@@ -1191,7 +1148,10 @@ module.exports = {
             );
 
 
-            if (!interaction.replied && !interaction.deferred) {
+            if (
+                !interaction.replied &&
+                !interaction.deferred
+            ) {
 
                 await interaction.reply({
 
