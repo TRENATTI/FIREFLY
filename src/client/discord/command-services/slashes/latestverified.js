@@ -44,16 +44,36 @@ module.exports = {
 
 		try {
 			// ============================================================
-			// GET VERIFIED USERS FROM FIREBASE
+			// GET LATEST VERIFIED USERS + TOTAL VERIFIED COUNT
 			// ============================================================
 
-			const snapshot = await db
-				.ref("system/user_verification")
-				.orderByChild("verifiedAt")
-				.limitToLast(10)
-				.get();
+			const verificationRef = db.ref("system/user_verification");
 
-			if (!snapshot.exists()) {
+			const [latestSnapshot, totalVerifiedSnapshot] = await Promise.all([
+				verificationRef
+					.orderByChild("verifiedAt")
+					.limitToLast(10)
+					.get(),
+
+				verificationRef
+					.orderByChild("verified")
+					.equalTo(true)
+					.get(),
+			]);
+
+			// ============================================================
+			// COUNT TOTAL VERIFIED USERS
+			// ============================================================
+
+			const totalVerified = totalVerifiedSnapshot.exists()
+				? totalVerifiedSnapshot.numChildren()
+				: 0;
+
+			// ============================================================
+			// CHECK LATEST USERS
+			// ============================================================
+
+			if (!latestSnapshot.exists()) {
 				return interaction.editReply({
 					content: "There are no verified users yet.",
 				});
@@ -65,7 +85,7 @@ module.exports = {
 
 			const users = [];
 
-			snapshot.forEach((childSnapshot) => {
+			latestSnapshot.forEach((childSnapshot) => {
 				const data = childSnapshot.val();
 
 				if (data.verified !== true) {
@@ -130,6 +150,11 @@ module.exports = {
 			const embed = new EmbedBuilder()
 				.setTitle("Latest Verified Users")
 				.setDescription(description)
+				.addFields({
+					name: "Verification Statistics",
+					value: `**${totalVerified.toLocaleString()}** people have verified so far.`,
+					inline: false,
+				})
 				.setColor("DarkBlue")
 				.setFooter({
 					text: interaction.guild.name,
