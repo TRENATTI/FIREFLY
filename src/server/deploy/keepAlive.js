@@ -4,11 +4,7 @@ const axios = require("axios");
 
 const server = express();
 
-const {
-    logUpdateVerify,
-    logToRoblox
-} = require("../../util/verify-logger.js");
-
+const { logUpdateVerify, logToRoblox } = require("../../util/verify-logger.js");
 
 // ======================================================
 // CONFIGURATION
@@ -16,874 +12,419 @@ const {
 
 const PORT = process.env.PORT || 3000;
 
-const ROBLOX_AUTHORIZE_URL =
-    "https://apis.roblox.com/oauth/v1/authorize";
+const ROBLOX_AUTHORIZE_URL = "https://apis.roblox.com/oauth/v1/authorize";
 
-const ROBLOX_TOKEN_URL =
-    "https://apis.roblox.com/oauth/v1/token";
+const ROBLOX_TOKEN_URL = "https://apis.roblox.com/oauth/v1/token";
 
-const ROBLOX_USERINFO_URL =
-    "https://apis.roblox.com/oauth/v1/userinfo";
-
+const ROBLOX_USERINFO_URL = "https://apis.roblox.com/oauth/v1/userinfo";
 
 // ======================================================
 // KEEP ALIVE
 // ======================================================
 
-function keepAlive(
-    client,
-    noblox,
-    currentUser,
-    admin,
-    token,
-    applicationid,
-    prefix
-) {
+function keepAlive(client, noblox, currentUser, admin, token, applicationid, prefix) {
+	// ==================================================
+	// SERVE WEBSITE FILES
+	// ==================================================
 
-    // ==================================================
-    // SERVE WEBSITE FILES
-    // ==================================================
+	server.use(express.static(path.join(__dirname, "public")));
 
-    server.use(
-        express.static(
-            path.join(__dirname, "public")
-        )
-    );
+	// ==================================================
+	// HOME / VERIFICATION PAGE
+	// ==================================================
 
+	server.get("/", async (req, res) => {
+		const state = req.query.state;
 
-    // ==================================================
-    // HOME / VERIFICATION PAGE
-    // ==================================================
+		// ----------------------------------------------
+		// NORMAL VISITOR
+		// ----------------------------------------------
 
-    server.get("/", async (req, res) => {
+		if (!state) {
+			return res.sendFile(path.join(__dirname, "public", "index.html"));
+		}
 
-        const state = req.query.state;
+		const db = admin.database();
 
+		try {
+			// ------------------------------------------
+			// FIND VERIFICATION SESSION
+			// ------------------------------------------
 
-        // ----------------------------------------------
-        // NORMAL VISITOR
-        // ----------------------------------------------
+			const snapshot = await db.ref("system/user_verification").orderByChild("statecode").equalTo(state).limitToFirst(1).get();
 
-        if (!state) {
+			if (!snapshot.exists()) {
+				return res.status(400).send("Invalid or expired verification session.");
+			}
 
-            return res.sendFile(
-                path.join(
-                    __dirname,
-                    "public",
-                    "index.html"
-                )
-            );
+			// ------------------------------------------
+			// READ HTML
+			// ------------------------------------------
 
-        }
+			const fs = require("fs");
 
+			let html = await fs.promises.readFile(path.join(__dirname, "public", "index.html"), "utf8");
 
-        const db =
-            admin.database();
+			// ------------------------------------------
+			// INSERT STATE INTO ROBLOX BUTTON
+			// ------------------------------------------
 
+			const oauthURL = `/oauth/roblox?state=${encodeURIComponent(state)}`;
 
-        try {
+			html = html.replace('href="/oauth/roblox"', `href="${oauthURL}"`);
 
-            // ------------------------------------------
-            // FIND VERIFICATION SESSION
-            // ------------------------------------------
+			return res.send(html);
+		} catch (error) {
+			console.error("Home page error:", error);
 
-            const snapshot =
-                await db
-                    .ref(
-                        "system/user_verification"
-                    )
-                    .orderByChild(
-                        "statecode"
-                    )
-                    .equalTo(
-                        state
-                    )
-                    .limitToFirst(1)
-                    .get();
+			return res.status(500).send("Unable to load verification page.");
+		}
+	});
 
+	// ======================================================
+	// LEGAL PAGES
+	// ======================================================
 
-            if (!snapshot.exists()) {
+	server.get("/terms", (req, res) => {
+		return res.sendFile(path.join(__dirname, "public", "terms.html"));
+	});
 
-                return res
-                    .status(400)
-                    .send(
-                        "Invalid or expired verification session."
-                    );
+	server.get("/privacy-policy", (req, res) => {
+		return res.sendFile(path.join(__dirname, "public", "privacy-policy.html"));
+	});
 
-            }
+	// ==================================================
+	// START ROBLOX OAUTH
+	// ==================================================
 
+	server.get("/oauth/roblox", async (req, res) => {
+		const state = req.query.state;
 
-            // ------------------------------------------
-            // READ HTML
-            // ------------------------------------------
+		// ------------------------------------------
+		// CHECK STATE
+		// ------------------------------------------
 
-            const fs =
-                require("fs");
+		if (!state) {
+			return res.status(400).send("Missing verification state.");
+		}
 
+		const db = admin.database();
 
-            let html =
-                await fs.promises.readFile(
-                    path.join(
-                        __dirname,
-                        "public",
-                        "index.html"
-                    ),
-                    "utf8"
-                );
+		try {
+			// --------------------------------------
+			// FIND VERIFICATION RECORD
+			// --------------------------------------
 
+			const snapshot = await db.ref("system/user_verification").orderByChild("statecode").equalTo(state).limitToFirst(1).get();
 
-            // ------------------------------------------
-            // INSERT STATE INTO ROBLOX BUTTON
-            // ------------------------------------------
+			if (!snapshot.exists()) {
+				return res.status(400).send("Invalid or expired verification session.");
+			}
 
-            const oauthURL =
-                `/oauth/roblox?state=${encodeURIComponent(state)}`;
+			// --------------------------------------
+			// GET RECORD
+			// --------------------------------------
 
+			const [key, data] = Object.entries(snapshot.val())[0];
 
-            html =
-                html.replace(
-                    'href="/oauth/roblox"',
-                    `href="${oauthURL}"`
-                );
+			// --------------------------------------
+			// PREVENT REUSE
+			// --------------------------------------
 
+			if (data.verified === true) {
+				return res.status(400).send("This verification session has already been completed.");
+			}
 
-            return res.send(
-                html
-            );
+			// --------------------------------------
+			// BUILD ROBLOX AUTH URL
+			// --------------------------------------
 
+			const params = new URLSearchParams({
+				client_id: process.env.ROBLOX_OAUTH2_CLIENTID,
 
-        } catch (error) {
+				response_type: "code",
 
-            console.error(
-                "Home page error:",
-                error
-            );
+				redirect_uri: process.env.ROBLOX_OAUTH2_REDIRECT_URI,
 
+				scope: "openid profile",
 
-            return res
-                .status(500)
-                .send(
-                    "Unable to load verification page."
-                );
+				state: state,
+			});
 
-        }
+			const authorizationURL = `${ROBLOX_AUTHORIZE_URL}?${params.toString()}`;
 
-    });
+			// --------------------------------------
+			// REDIRECT TO ROBLOX
+			// --------------------------------------
 
-    
-    // ======================================================
-    // LEGAL PAGES
-    // ======================================================
+			return res.redirect(authorizationURL);
+		} catch (error) {
+			console.error("Roblox OAuth start error:", error);
 
-    server.get("/terms", (req, res) => {
-        return res.sendFile(
-            path.join(__dirname, "public", "terms.html")
-        );
-    });
+			return res.status(500).send("Unable to start Roblox authentication.");
+		}
+	});
 
-    server.get("/privacy-policy", (req, res) => {
-        return res.sendFile(
-            path.join(__dirname, "public", "privacy-policy.html")
-        );
-    });
+	// ==================================================
+	// ROBLOX OAUTH CALLBACK
+	// ==================================================
 
-    // ==================================================
-    // START ROBLOX OAUTH
-    // ==================================================
+	server.get("/redirect", async (req, res) => {
+		const { code, state, error, error_description } = req.query;
 
-    server.get(
-        "/oauth/roblox",
-        async (req, res) => {
+		// ------------------------------------------
+		// ROBLOX OAUTH ERROR
+		// ------------------------------------------
 
-            const state =
-                req.query.state;
+		if (error) {
+			console.warn("Roblox OAuth error:", error, error_description || "");
 
+			return res.status(400).send("Roblox authentication was cancelled or failed.");
+		}
 
-            // ------------------------------------------
-            // CHECK STATE
-            // ------------------------------------------
+		// ------------------------------------------
+		// CHECK PARAMETERS
+		// ------------------------------------------
 
-            if (!state) {
+		if (!code || !state) {
+			return res.status(400).send("Missing OAuth code or state.");
+		}
 
-                return res
-                    .status(400)
-                    .send(
-                        "Missing verification state."
-                    );
+		const db = admin.database();
 
-            }
+		try {
+			// ======================================
+			// FIND VERIFICATION RECORD
+			// ======================================
 
+			const snapshot = await db.ref("system/user_verification").orderByChild("statecode").equalTo(state).limitToFirst(1).get();
 
-            const db =
-                admin.database();
+			if (!snapshot.exists()) {
+				return res.status(404).send("Invalid or expired verification state.");
+			}
 
+			// ======================================
+			// GET FIREBASE RECORD
+			// ======================================
 
-            try {
+			const [key, data] = Object.entries(snapshot.val())[0];
 
-                // --------------------------------------
-                // FIND VERIFICATION RECORD
-                // --------------------------------------
+			// ======================================
+			// CHECK SESSION
+			// ======================================
 
-                const snapshot =
-                    await db
-                        .ref(
-                            "system/user_verification"
-                        )
-                        .orderByChild(
-                            "statecode"
-                        )
-                        .equalTo(
-                            state
-                        )
-                        .limitToFirst(1)
-                        .get();
+			if (data.verified === true) {
+				return res.status(400).send("This verification session has already been completed.");
+			}
 
+			// ======================================
+			// GET DISCORD USER
+			// ======================================
 
-                if (!snapshot.exists()) {
+			const user = data.discordID ? await client.users.fetch(data.discordID).catch(() => null) : null;
 
-                    return res
-                        .status(400)
-                        .send(
-                            "Invalid or expired verification session."
-                        );
+			// --------------------------------------
+			// DISCORD USER IS REQUIRED FOR THE
+			// EXISTING DISCORD NICKNAME/LOG SYSTEM
+			// --------------------------------------
 
-                }
+			if (!user) {
+				return res.status(404).send("Discord user could not be found.");
+			}
 
+			// ======================================
+			// EXCHANGE CODE FOR ACCESS TOKEN
+			// ======================================
 
-                // --------------------------------------
-                // GET RECORD
-                // --------------------------------------
+			const params = new URLSearchParams();
 
-                const [
-                    key,
-                    data
-                ] =
-                    Object.entries(
-                        snapshot.val()
-                    )[0];
+			params.append("client_id", process.env.ROBLOX_OAUTH2_CLIENTID);
 
+			params.append("client_secret", process.env.ROBLOX_OAUTH2_SECRET);
 
-                // --------------------------------------
-                // PREVENT REUSE
-                // --------------------------------------
+			params.append("grant_type", "authorization_code");
 
-                if (
-                    data.verified === true
-                ) {
+			params.append("code", code);
 
-                    return res
-                        .status(400)
-                        .send(
-                            "This verification session has already been completed."
-                        );
+			params.append("redirect_uri", process.env.ROBLOX_OAUTH2_REDIRECT_URI);
 
-                }
+			let tokenResponse;
 
+			try {
+				tokenResponse = await axios.post(ROBLOX_TOKEN_URL, params, {
+					headers: {
+						"Content-Type": "application/x-www-form-urlencoded",
+					},
+				});
+			} catch (error) {
+				console.error("Roblox token exchange failed:", error.response?.data || error.message);
 
-                // --------------------------------------
-                // BUILD ROBLOX AUTH URL
-                // --------------------------------------
+				return res.status(400).send("Failed to authenticate with Roblox.");
+			}
 
-                const params =
-                    new URLSearchParams({
+			// ======================================
+			// GET ACCESS TOKEN
+			// ======================================
 
-                        client_id:
-                            process.env
-                                .ROBLOX_OAUTH2_CLIENTID,
+			const access_token = tokenResponse.data.access_token;
 
-                        response_type:
-                            "code",
+			if (!access_token) {
+				console.error("No Roblox access token returned:", tokenResponse.data);
 
-                        redirect_uri:
-                            process.env
-                                .ROBLOX_OAUTH2_REDIRECT_URI,
+				return res.status(400).send("Roblox did not return an access token.");
+			}
 
-                        scope:
-                            "openid profile",
+			// ======================================
+			// GET ROBLOX USER INFORMATION
+			// ======================================
 
-                        state:
-                            state
+			const userInfoResponse = await fetch(ROBLOX_USERINFO_URL, {
+				method: "GET",
 
-                    });
+				headers: {
+					Authorization: `Bearer ${access_token}`,
+				},
+			});
 
+			if (!userInfoResponse.ok) {
+				const errorText = await userInfoResponse.text();
 
-                const authorizationURL =
-                    `${ROBLOX_AUTHORIZE_URL}?${params.toString()}`;
+				console.error("Roblox userinfo failed:", userInfoResponse.status, errorText);
 
+				return res.status(400).send("Failed to retrieve Roblox account information.");
+			}
 
-                // --------------------------------------
-                // REDIRECT TO ROBLOX
-                // --------------------------------------
+			const userInfo = await userInfoResponse.json();
 
-                return res.redirect(
-                    authorizationURL
-                );
+			// ======================================
+			// CHECK ROBLOX ACCOUNT
+			// ======================================
 
+			if (!userInfo.sub) {
+				console.error("Roblox userinfo missing sub:", userInfo);
 
-            } catch (error) {
+				return res.status(400).send("Roblox account information was incomplete.");
+			}
 
-                console.error(
-                    "Roblox OAuth start error:",
-                    error
-                );
+			// ======================================
+			// ROBLOX INFORMATION
+			// ======================================
 
+			const robloxID = String(userInfo.sub);
 
-                return res
-                    .status(500)
-                    .send(
-                        "Unable to start Roblox authentication."
-                    );
+			const robloxUsername = userInfo.preferred_username || userInfo.name || "Unknown";
 
-            }
+			const robloxDisplayName = userInfo.name || null;
 
-        }
-    );
+			const robloxProfile = userInfo.profile || null;
 
+			// ======================================
+			// UPDATE FIREBASE
+			// ======================================
 
-    // ==================================================
-    // ROBLOX OAUTH CALLBACK
-    // ==================================================
+			await db.ref("system/user_verification").child(key).update({
+				verified: true,
 
-    server.get(
-        "/redirect",
-        async (req, res) => {
+				robloxID: robloxID,
 
-            const {
-                code,
-                state,
-                error,
-                error_description
-            } = req.query;
+				robloxUsername: robloxUsername,
 
+				robloxDisplayName: robloxDisplayName,
 
-            // ------------------------------------------
-            // ROBLOX OAUTH ERROR
-            // ------------------------------------------
+				robloxProfile: robloxProfile,
 
-            if (error) {
+				statecode: null,
 
-                console.warn(
-                    "Roblox OAuth error:",
-                    error,
-                    error_description || ""
-                );
+				verifiedAt: Date.now(),
 
+				verificationMethod: "website",
+			});
 
-                return res
-                    .status(400)
-                    .send(
-                        "Roblox authentication was cancelled or failed."
-                    );
+			// ======================================
+			// LOG TO ROBLOX
+			// ======================================
+			//
+			// THIS IS WHERE logToRoblox GOES.
+			//
+			// The Roblox account has now been
+			// successfully authenticated.
+			//
+			// Adjust the arguments here if your
+			// logToRoblox function uses a different
+			// signature.
+			// ======================================
 
-            }
+			try {
+				await logUpdateVerify(noblox, currentUser, {
+					discordID: user.id,
 
+					discordUsername: user.username,
 
-            // ------------------------------------------
-            // CHECK PARAMETERS
-            // ------------------------------------------
+					robloxID: robloxID,
 
-            if (!code || !state) {
+					robloxUsername: robloxUsername,
 
-                return res
-                    .status(400)
-                    .send(
-                        "Missing OAuth code or state."
-                    );
+					robloxDisplayName: robloxDisplayName,
 
-            }
+					robloxProfile: robloxProfile,
+				});
+			} catch (error) {
+				console.warn("logUpdateVerify failed:", error);
+			}
 
+			// ======================================
+			// GET DISCORD GUILD
+			// ======================================
 
-            const db =
-                admin.database();
+			const guild = client.guilds.cache.get(data.verificationGuildID);
 
+			let nicknameUpdated = false;
 
-            try {
+			// ======================================
+			// UPDATE DISCORD NICKNAME
+			// ======================================
 
-                // ======================================
-                // FIND VERIFICATION RECORD
-                // ======================================
+			if (guild) {
+				const member = await guild.members.fetch(user.id).catch(() => null);
 
-                const snapshot =
-                    await db
-                        .ref(
-                            "system/user_verification"
-                        )
-                        .orderByChild(
-                            "statecode"
-                        )
-                        .equalTo(
-                            state
-                        )
-                        .limitToFirst(1)
-                        .get();
+				if (member && member.id !== guild.ownerId) {
+					try {
+						await member.setNickname(robloxUsername);
 
+						nicknameUpdated = true;
+					} catch (error) {
+						console.warn("Could not update Discord nickname:", error);
+					}
+				}
 
-                if (!snapshot.exists()) {
+				// ==================================
+				// LOG DISCORD VERIFICATION
+				// ==================================
 
-                    return res
-                        .status(404)
-                        .send(
-                            "Invalid or expired verification state."
-                        );
+				try {
+					await logUpdateVerify(client, admin, {
+						guildId: guild.id,
 
-                }
+						type: "verify",
 
+						discordUser: user.id,
 
-                // ======================================
-                // GET FIREBASE RECORD
-                // ======================================
+						robloxUsername: robloxUsername,
 
-                const [
-                    key,
-                    data
-                ] =
-                    Object.entries(
-                        snapshot.val()
-                    )[0];
+						robloxId: robloxID,
 
+						nicknameChanged: nicknameUpdated,
+					});
+				} catch (error) {
+					console.error("logUpdateVerify failed:", error);
+				}
+			}
 
-                // ======================================
-                // CHECK SESSION
-                // ======================================
+			// ======================================
+			// SUCCESS
+			// ======================================
 
-                if (
-                    data.verified === true
-                ) {
-
-                    return res
-                        .status(400)
-                        .send(
-                            "This verification session has already been completed."
-                        );
-
-                }
-
-
-                // ======================================
-                // GET DISCORD USER
-                // ======================================
-
-                const user =
-                    data.discordID
-                        ? await client.users
-                            .fetch(
-                                data.discordID
-                            )
-                            .catch(
-                                () => null
-                            )
-                        : null;
-
-
-                // --------------------------------------
-                // DISCORD USER IS REQUIRED FOR THE
-                // EXISTING DISCORD NICKNAME/LOG SYSTEM
-                // --------------------------------------
-
-                if (!user) {
-
-                    return res
-                        .status(404)
-                        .send(
-                            "Discord user could not be found."
-                        );
-
-                }
-
-
-                // ======================================
-                // EXCHANGE CODE FOR ACCESS TOKEN
-                // ======================================
-
-                const params =
-                    new URLSearchParams();
-
-
-                params.append(
-                    "client_id",
-                    process.env
-                        .ROBLOX_OAUTH2_CLIENTID
-                );
-
-
-                params.append(
-                    "client_secret",
-                    process.env
-                        .ROBLOX_OAUTH2_SECRET
-                );
-
-
-                params.append(
-                    "grant_type",
-                    "authorization_code"
-                );
-
-
-                params.append(
-                    "code",
-                    code
-                );
-
-
-                params.append(
-                    "redirect_uri",
-                    process.env
-                        .ROBLOX_OAUTH2_REDIRECT_URI
-                );
-
-
-                let tokenResponse;
-
-
-                try {
-
-                    tokenResponse =
-                        await axios.post(
-                            ROBLOX_TOKEN_URL,
-                            params,
-                            {
-                                headers: {
-                                    "Content-Type":
-                                        "application/x-www-form-urlencoded"
-                                }
-                            }
-                        );
-
-
-                } catch (error) {
-
-                    console.error(
-                        "Roblox token exchange failed:",
-                        error.response?.data ||
-                        error.message
-                    );
-
-
-                    return res
-                        .status(400)
-                        .send(
-                            "Failed to authenticate with Roblox."
-                        );
-
-                }
-
-
-                // ======================================
-                // GET ACCESS TOKEN
-                // ======================================
-
-                const access_token =
-                    tokenResponse
-                        .data
-                        .access_token;
-
-
-                if (!access_token) {
-
-                    console.error(
-                        "No Roblox access token returned:",
-                        tokenResponse.data
-                    );
-
-
-                    return res
-                        .status(400)
-                        .send(
-                            "Roblox did not return an access token."
-                        );
-
-                }
-
-
-                // ======================================
-                // GET ROBLOX USER INFORMATION
-                // ======================================
-
-                const userInfoResponse =
-                    await fetch(
-                        ROBLOX_USERINFO_URL,
-                        {
-                            method: "GET",
-
-                            headers: {
-                                Authorization:
-                                    `Bearer ${access_token}`
-                            }
-                        }
-                    );
-
-
-                if (!userInfoResponse.ok) {
-
-                    const errorText =
-                        await userInfoResponse.text();
-
-
-                    console.error(
-                        "Roblox userinfo failed:",
-                        userInfoResponse.status,
-                        errorText
-                    );
-
-
-                    return res
-                        .status(400)
-                        .send(
-                            "Failed to retrieve Roblox account information."
-                        );
-
-                }
-
-
-                const userInfo =
-                    await userInfoResponse.json();
-
-
-                // ======================================
-                // CHECK ROBLOX ACCOUNT
-                // ======================================
-
-                if (!userInfo.sub) {
-
-                    console.error(
-                        "Roblox userinfo missing sub:",
-                        userInfo
-                    );
-
-
-                    return res
-                        .status(400)
-                        .send(
-                            "Roblox account information was incomplete."
-                        );
-
-                }
-
-
-                // ======================================
-                // ROBLOX INFORMATION
-                // ======================================
-
-                const robloxID =
-                    String(
-                        userInfo.sub
-                    );
-
-
-                const robloxUsername =
-                    userInfo.preferred_username ||
-                    userInfo.name ||
-                    "Unknown";
-
-
-                const robloxDisplayName =
-                    userInfo.name ||
-                    null;
-
-
-                const robloxProfile =
-                    userInfo.profile ||
-                    null;
-
-
-                // ======================================
-                // UPDATE FIREBASE
-                // ======================================
-
-                await db
-                    .ref(
-                        "system/user_verification"
-                    )
-                    .child(
-                        key
-                    )
-                    .update({
-
-                        verified:
-                            true,
-
-                        robloxID:
-                            robloxID,
-
-                        robloxUsername:
-                            robloxUsername,
-
-                        robloxDisplayName:
-                            robloxDisplayName,
-
-                        robloxProfile:
-                            robloxProfile,
-
-                        statecode:
-                            null,
-
-                        verifiedAt:
-                            Date.now()
-
-                    });
-
-
-                // ======================================
-                // LOG TO ROBLOX
-                // ======================================
-                //
-                // THIS IS WHERE logToRoblox GOES.
-                //
-                // The Roblox account has now been
-                // successfully authenticated.
-                //
-                // Adjust the arguments here if your
-                // logToRoblox function uses a different
-                // signature.
-                // ======================================
-
-                try {
-
-                    await logUpdateVerify(
-                        noblox,
-                        currentUser,
-                        {
-                            discordID:
-                                user.id,
-
-                            discordUsername:
-                                user.username,
-
-                            robloxID:
-                                robloxID,
-
-                            robloxUsername:
-                                robloxUsername,
-
-                            robloxDisplayName:
-                                robloxDisplayName,
-
-                            robloxProfile:
-                                robloxProfile
-                        }
-                    );
-
-
-                } catch (error) {
-
-                    console.error(
-                        "logUpdateVerify failed:",
-                        error
-                    );
-
-                }
-
-
-                // ======================================
-                // GET DISCORD GUILD
-                // ======================================
-
-                const guild =
-                    client.guilds.cache.get(
-                        data.verificationGuildID
-                    );
-
-
-                let nicknameUpdated =
-                    false;
-
-
-                // ======================================
-                // UPDATE DISCORD NICKNAME
-                // ======================================
-
-                if (guild) {
-
-                    const member =
-                        await guild.members
-                            .fetch(
-                                user.id
-                            )
-                            .catch(
-                                () => null
-                            );
-
-
-                    if (
-                        member &&
-                        member.id !== guild.ownerId
-                    ) {
-
-                        try {
-
-                            await member.setNickname(
-                                robloxUsername
-                            );
-
-
-                            nicknameUpdated =
-                                true;
-
-
-                        } catch (error) {
-
-                            console.warn(
-                                "Could not update Discord nickname:",
-                                error
-                            );
-
-                        }
-
-                    }
-
-
-                    // ==================================
-                    // LOG DISCORD VERIFICATION
-                    // ==================================
-
-                    try {
-
-                        await logUpdateVerify(
-                            client,
-                            admin,
-                            {
-
-                                guildId:
-                                    guild.id,
-
-                                type:
-                                    "verify",
-
-                                discordUser:
-                                    user.id,
-
-                                robloxUsername:
-                                    robloxUsername,
-
-                                robloxId:
-                                    robloxID,
-
-                                nicknameChanged:
-                                    nicknameUpdated
-
-                            }
-                        );
-
-
-                    } catch (error) {
-
-                        console.error(
-                            "logUpdateVerify failed:",
-                            error
-                        );
-
-                    }
-
-                }
-
-
-                // ======================================
-                // SUCCESS
-                // ======================================
-
-                return res
-                    .status(200)
-                    .send(`
+			return res.status(200).send(`
 
                         <!DOCTYPE html>
 
@@ -995,9 +536,7 @@ function keepAlive(
 
                                 <p class="username">
                                     Roblox:
-                                    ${escapeHtml(
-                                        robloxUsername
-                                    )}
+                                    ${escapeHtml(robloxUsername)}
                                 </p>
 
                                 <p>
@@ -1011,95 +550,37 @@ function keepAlive(
                         </html>
 
                     `);
+		} catch (error) {
+			console.error("Verification error:", error);
 
+			return res.status(500).send("An error occurred while verifying your account.");
+		}
+	});
 
-            } catch (error) {
+	// ==================================================
+	// 404
+	// ==================================================
 
-                console.error(
-                    "Verification error:",
-                    error
-                );
+	server.use((req, res) => {
+		return res.status(404).send("Page not found.");
+	});
 
+	// ==================================================
+	// START SERVER
+	// ==================================================
 
-                return res
-                    .status(500)
-                    .send(
-                        "An error occurred while verifying your account."
-                    );
-
-            }
-
-        }
-    );
-
-
-    // ==================================================
-    // 404
-    // ==================================================
-
-    server.use(
-        (req, res) => {
-
-            return res
-                .status(404)
-                .send(
-                    "Page not found."
-                );
-
-        }
-    );
-
-
-    // ==================================================
-    // START SERVER
-    // ==================================================
-
-    server.listen(
-        PORT,
-        () => {
-
-            console.log(
-                new Date(),
-                "| server.js |",
-                `Server is Ready on port ${PORT}!`
-            );
-
-        }
-    );
-
+	server.listen(PORT, () => {
+		console.log(new Date(), "| server.js |", `Server is Ready on port ${PORT}!`);
+	});
 }
-
 
 // ======================================================
 // ESCAPE HTML
 // ======================================================
 
 function escapeHtml(value) {
-
-    return String(value)
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
+	return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
-
 
 // ======================================================
 // EXPORT
