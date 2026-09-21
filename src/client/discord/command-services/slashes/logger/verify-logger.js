@@ -1,347 +1,193 @@
-const {
-    EmbedBuilder
-} = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 
-const {
-    getLogChannel
-} = require("./cache.js");
+const { getLogChannel } = require("./cache.js");
 
+async function logUpdateVerify(client, admin, options = {}) {
+	const { guildId, type, discordUser, robloxUsername, robloxId, nicknameChanged, rolesAdded = [], rolesRemoved = [], error = null } = options;
 
-async function logUpdateVerify(
-    client,
-    admin,
-    options = {}
-) {
+	// ==========================================
+	// VALIDATION
+	// ==========================================
 
-    const {
-        guildId,
-        type,
-        discordUser,
-        robloxUsername,
-        robloxId,
-        nicknameChanged,
-        rolesAdded = [],
-        rolesRemoved = [],
-        error = null
-    } = options;
+	if (!client || !admin || !guildId) {
+		return;
+	}
 
+	try {
+		// ==========================================
+		// GET CACHED LOG CONFIGURATION
+		// ==========================================
 
-    // ==========================================
-    // VALIDATION
-    // ==========================================
+		const logData = await getLogChannel(admin, guildId);
 
-    if (
-        !client ||
-        !admin ||
-        !guildId
-    ) {
-        return;
-    }
+		if (!logData || !logData.channelId) {
+			return;
+		}
 
+		// ==========================================
+		// GET GUILD
+		// ==========================================
 
-    try {
+		const guild = client.guilds.cache.get(guildId);
 
-        // ==========================================
-        // GET CACHED LOG CONFIGURATION
-        // ==========================================
+		if (!guild) {
+			return;
+		}
 
-        const logData =
-            await getLogChannel(
-                admin,
-                guildId
-            );
+		// ==========================================
+		// GET CHANNEL
+		// ==========================================
 
+		const channel = await guild.channels.fetch(logData.channelId).catch(() => null);
 
-        if (
-            !logData ||
-            !logData.channelId
-        ) {
-            return;
-        }
+		if (!channel) {
+			console.warn(`Log channel ${logData.channelId} could not be found.`);
 
+			return;
+		}
 
-        // ==========================================
-        // GET GUILD
-        // ==========================================
+		// ==========================================
+		// EMBED SETTINGS
+		// ==========================================
 
-        const guild =
-            client.guilds.cache.get(
-                guildId
-            );
+		let color = 0x5865f2;
 
+		let title = "Verification / Update Log";
 
-        if (!guild) {
-            return;
-        }
+		if (type === "verify") {
+			color = 0x57f287;
 
+			title = "Roblox Verification";
+		}
 
-        // ==========================================
-        // GET CHANNEL
-        // ==========================================
+		if (type === "update") {
+			color = 0x3498db;
 
-        const channel =
-            await guild.channels
-                .fetch(
-                    logData.channelId
-                )
-                .catch(
-                    () => null
-                );
+			title = "Roblox Account Update";
+		}
 
+		if (type === "error") {
+			color = 0xed4245;
 
-        if (!channel) {
+			title = "Verification / Update Error";
+		}
 
-            console.warn(
-                `Log channel ${logData.channelId} could not be found.`
-            );
+		// ==========================================
+		// CREATE EMBED
+		// ==========================================
 
-            return;
+		const embed = new EmbedBuilder().setColor(color).setTitle(title).setTimestamp();
 
-        }
+		// ==========================================
+		// DISCORD USER
+		// ==========================================
 
+		if (discordUser) {
+			embed.addFields({
+				name: "Discord User",
 
-        // ==========================================
-        // EMBED SETTINGS
-        // ==========================================
+				value: `<@${discordUser}> (\`${discordUser}\`)`,
 
-        let color =
-            0x5865F2;
+				inline: false,
+			});
+		}
 
-        let title =
-            "Verification / Update Log";
+		// ==========================================
+		// ROBLOX USERNAME
+		// ==========================================
 
+		if (robloxUsername) {
+			embed.addFields({
+				name: "Roblox Username",
 
-        if (
-            type === "verify"
-        ) {
+				value: `\`${robloxUsername}\``,
 
-            color =
-                0x57F287;
+				inline: true,
+			});
+		}
 
-            title =
-                "Roblox Verification";
+		// ==========================================
+		// ROBLOX ID
+		// ==========================================
 
-        }
+		if (robloxId) {
+			embed.addFields({
+				name: "Roblox ID",
 
+				value: `\`${robloxId}\``,
 
-        if (
-            type === "update"
-        ) {
+				inline: true,
+			});
+		}
 
-            color =
-                0x3498DB;
+		// ==========================================
+		// NICKNAME
+		// ==========================================
 
-            title =
-                "Roblox Account Update";
+		if (nicknameChanged !== undefined) {
+			embed.addFields({
+				name: "Nickname",
 
-        }
+				value: nicknameChanged ? "Updated" : "Not changed",
 
+				inline: true,
+			});
+		}
 
-        if (
-            type === "error"
-        ) {
+		// ==========================================
+		// ROLES ADDED
+		// ==========================================
 
-            color =
-                0xED4245;
+		if (rolesAdded.length > 0) {
+			embed.addFields({
+				name: "Roles Added",
 
-            title =
-                "Verification / Update Error";
+				value: rolesAdded.map((role) => `<@&${role}>`).join(", "),
 
-        }
+				inline: false,
+			});
+		}
 
+		// ==========================================
+		// ROLES REMOVED
+		// ==========================================
 
-        // ==========================================
-        // CREATE EMBED
-        // ==========================================
+		if (rolesRemoved.length > 0) {
+			embed.addFields({
+				name: "Roles Removed",
 
-        const embed =
-            new EmbedBuilder()
-                .setColor(color)
-                .setTitle(title)
-                .setTimestamp();
+				value: rolesRemoved.map((role) => `<@&${role}>`).join(", "),
 
+				inline: false,
+			});
+		}
 
-        // ==========================================
-        // DISCORD USER
-        // ==========================================
+		// ==========================================
+		// ERROR
+		// ==========================================
 
-        if (discordUser) {
+		if (error) {
+			embed.addFields({
+				name: "Error",
 
-            embed.addFields({
-                name:
-                    "Discord User",
+				value: `\`\`\`\n${String(error).slice(0, 1000)}\n\`\`\``,
 
-                value:
-                    `<@${discordUser}> (\`${discordUser}\`)`,
+				inline: false,
+			});
+		}
 
-                inline:
-                    false
-            });
+		// ==========================================
+		// SEND LOG
+		// ==========================================
 
-        }
-
-
-        // ==========================================
-        // ROBLOX USERNAME
-        // ==========================================
-
-        if (robloxUsername) {
-
-            embed.addFields({
-                name:
-                    "Roblox Username",
-
-                value:
-                    `\`${robloxUsername}\``,
-
-                inline:
-                    true
-            });
-
-        }
-
-
-        // ==========================================
-        // ROBLOX ID
-        // ==========================================
-
-        if (robloxId) {
-
-            embed.addFields({
-                name:
-                    "Roblox ID",
-
-                value:
-                    `\`${robloxId}\``,
-
-                inline:
-                    true
-            });
-
-        }
-
-
-        // ==========================================
-        // NICKNAME
-        // ==========================================
-
-        if (
-            nicknameChanged !== undefined
-        ) {
-
-            embed.addFields({
-                name:
-                    "Nickname",
-
-                value:
-                    nicknameChanged
-                        ? "Updated"
-                        : "Not changed",
-
-                inline:
-                    true
-            });
-
-        }
-
-
-        // ==========================================
-        // ROLES ADDED
-        // ==========================================
-
-        if (
-            rolesAdded.length > 0
-        ) {
-
-            embed.addFields({
-                name:
-                    "Roles Added",
-
-                value:
-                    rolesAdded
-                        .map(
-                            role =>
-                                `<@&${role}>`
-                        )
-                        .join(", "),
-
-                inline:
-                    false
-            });
-
-        }
-
-
-        // ==========================================
-        // ROLES REMOVED
-        // ==========================================
-
-        if (
-            rolesRemoved.length > 0
-        ) {
-
-            embed.addFields({
-                name:
-                    "Roles Removed",
-
-                value:
-                    rolesRemoved
-                        .map(
-                            role =>
-                                `<@&${role}>`
-                        )
-                        .join(", "),
-
-                inline:
-                    false
-            });
-
-        }
-
-
-        // ==========================================
-        // ERROR
-        // ==========================================
-
-        if (error) {
-
-            embed.addFields({
-                name:
-                    "Error",
-
-                value:
-                    `\`\`\`\n${String(error).slice(0, 1000)}\n\`\`\``,
-
-                inline:
-                    false
-            });
-
-        }
-
-
-        // ==========================================
-        // SEND LOG
-        // ==========================================
-
-        await channel.send({
-            embeds: [
-                embed
-            ]
-        });
-
-
-    } catch (error) {
-
-        console.error(
-            "Logger error:",
-            error
-        );
-
-    }
-
+		await channel.send({
+			embeds: [embed],
+		});
+	} catch (error) {
+		console.error("Logger error:", error);
+	}
 }
 
-
 module.exports = {
-    logUpdateVerify
+	logUpdateVerify,
 };
