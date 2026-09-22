@@ -266,7 +266,7 @@ module.exports = function (
 					return interaction.reply({
 						content:
 							`Your Discord account is already linked to **${existingData.robloxUsername}**.\n\n` +
-							`If you need to verify a different Roblox account, use the existing `/verify` reverify system.`,
+							`If you need to verify a different Roblox account, use the existing \`/verify\` reverify system.`,
 						flags: MessageFlags.Ephemeral,
 					});
 				}
