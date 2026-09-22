@@ -16,11 +16,11 @@ const https = require("https");
 
 const {
 	getRoleBindings
-} = require("./logger/cache.js");
+} = require("../../../util/cache.js");
 
 const {
 	logUpdateVerify
-} = require("./logger/verify-logger.js");
+} = require("../../../util/verify-logger.js");
 
 
 module.exports = function (
