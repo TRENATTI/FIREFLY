@@ -409,11 +409,7 @@ module.exports = function (
 
 				const embed = new EmbedBuilder()
 					.setTitle("Roblox Verification")
-					.setDescription(
-						`To verify ownership of **${robloxUser.username}**, put the following code somewhere in your Roblox profile description:\n\n` +
-						`**${code}**\n\n` +
-						`After adding the code, click **Confirm Verification** below.`
-					)
+					.setDescription(`To verify that **${robloxUser.username}** is your Roblox account:\n\n` + `1. Visit [**your profile**](https://www.roblox.com/users/${robloxUserId}/profile)\n` + `2. Add this code to your **About Me**:\n` + `\`\`\`${code}\`\`\`\n` + `3. Click **Confirm** below once you've done it.`)
 					.addFields({
 						name: "Roblox Profile",
 						value:
