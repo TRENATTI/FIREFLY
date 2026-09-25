@@ -170,7 +170,80 @@ module.exports = {
             const rolesToAdd = [];
             const rolesToRemove = [];
 
+            // ==========================================
+            // VERIFIED ROLE
+            // ==========================================
 
+            let verifiedRole =
+                guild.roles.cache.find(
+                    role => role.name === "Verified"
+                );
+
+
+            // ==========================================
+            // CREATE VERIFIED ROLE IF NEEDED
+            // ==========================================
+
+            if (!verifiedRole) {
+
+                try {
+
+                    verifiedRole =
+                        await guild.roles.create({
+
+                            name: "Verified",
+
+                            reason:
+                                "Created automatically by the verification system."
+
+                        });
+
+                } catch (error) {
+
+                    console.warn(
+                        "Could not create Verified role:",
+                        error
+                    );
+
+                    verifiedRole = null;
+
+                }
+
+            }
+
+
+            // ==========================================
+            // ADD VERIFIED ROLE
+            // ==========================================
+
+            if (verifiedRole) {
+
+                if (
+                    verifiedRole.position <
+                    guild.members.me.roles.highest.position
+                ) {
+
+                    if (
+                        !member.roles.cache.has(
+                            verifiedRole.id
+                        )
+                    ) {
+
+                        rolesToAdd.push(
+                            verifiedRole
+                        );
+
+                    }
+
+                } else {
+
+                    console.warn(
+                        "Cannot add Verified role: role is higher than or equal to the bot's highest role."
+                    );
+
+                }
+
+            }
             // ==========================================
             // ROBLOX RANK CACHE
             // ==========================================
