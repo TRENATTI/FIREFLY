@@ -385,39 +385,193 @@ function keepAlive(client, noblox, currentUser, admin, token, applicationid, pre
 			// ======================================
 
 			if (guild) {
-				const member = await guild.members.fetch(user.id).catch(() => null);
 
-				if (member && member.id !== guild.ownerId) {
-					try {
-						await member.setNickname(robloxUsername);
+				const member =
+					await guild.members
+						.fetch(user.id)
+						.catch(() => null);
 
-						nicknameUpdated = true;
-					} catch (error) {
-						console.warn("Could not update Discord nickname:", error);
+
+				if (member) {
+
+					// ======================================
+					// CHECK MANAGE ROLES
+					// ======================================
+
+					if (
+						guild.members.me &&
+						guild.members.me.permissions.has(
+							"ManageRoles"
+						)
+					) {
+
+						// ======================================
+						// GET VERIFIED ROLE
+						// ======================================
+
+						let verifiedRole =
+							guild.roles.cache.find(
+								role => role.name === "Verified"
+							);
+
+
+						// ======================================
+						// CREATE VERIFIED ROLE IF NEEDED
+						// ======================================
+
+						if (!verifiedRole) {
+
+							try {
+
+								verifiedRole =
+									await guild.roles.create({
+
+										name: "Verified",
+
+										reason:
+											"Created automatically by the verification system."
+
+									});
+
+							} catch (error) {
+
+								console.warn(
+									"Could not create Verified role:",
+									error
+								);
+
+								verifiedRole = null;
+
+							}
+
+						}
+
+
+						// ======================================
+						// ADD VERIFIED ROLE
+						// ======================================
+
+						if (verifiedRole) {
+
+							if (
+								verifiedRole.id !== guild.id &&
+								!verifiedRole.managed &&
+								verifiedRole.position <
+									guild.members.me.roles.highest.position
+							) {
+
+								if (
+									!member.roles.cache.has(
+										verifiedRole.id
+									)
+								) {
+
+									try {
+
+										await member.roles.add(
+											verifiedRole
+										);
+
+									} catch (error) {
+
+										console.warn(
+											"Could not add Verified role:",
+											error
+										);
+
+									}
+
+								}
+
+							} else {
+
+								console.warn(
+									"Cannot add Verified role: role is higher than or equal to the bot's highest role."
+								);
+
+							}
+
+						}
+
+					} else {
+
+						console.warn(
+							"Cannot add Verified role: bot does not have Manage Roles permission."
+						);
+
 					}
+
+
+					// ======================================
+					// UPDATE DISCORD NICKNAME
+					// ======================================
+
+					if (
+						member.id !== guild.ownerId
+					) {
+
+						try {
+
+							await member.setNickname(
+								robloxUsername
+							);
+
+							nicknameUpdated =
+								true;
+
+						} catch (error) {
+
+							console.warn(
+								"Could not update Discord nickname:",
+								error
+							);
+
+						}
+
+					}
+
 				}
+
 
 				// ==================================
 				// LOG DISCORD VERIFICATION
 				// ==================================
 
 				try {
-					await logUpdateVerify(client, admin, {
-						guildId: guild.id,
 
-						type: "verify",
+					await logUpdateVerify(
+						client,
+						admin,
+						{
+							guildId:
+								guild.id,
 
-						discordUser: user.id,
+							type:
+								"verify",
 
-						robloxUsername: robloxUsername,
+							discordUser:
+								user.id,
 
-						robloxId: robloxID,
+							robloxUsername:
+								robloxUsername,
 
-						nicknameChanged: nicknameUpdated,
-					});
+							robloxId:
+								robloxID,
+
+							nicknameChanged:
+								nicknameUpdated,
+						}
+					);
+
 				} catch (error) {
-					console.error("logUpdateVerify failed:", error);
+
+					console.error(
+						"logUpdateVerify failed:",
+						error
+					);
+
 				}
+
 			}
 
 			// ======================================
