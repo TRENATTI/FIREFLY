@@ -78,7 +78,9 @@ async function TECHES(client, noblox, currentUser, admin) {
             await awardRoles();
         }
 
-        async function awardRoles() {
+        async function awardRoles(new_total_points) {
+
+            if (Math.floor((new_total_points/60) ** .5) < 5) return;
 
             const guild = message.guild;
             const member = message.member;
