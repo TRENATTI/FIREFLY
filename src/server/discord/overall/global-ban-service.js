@@ -21,7 +21,8 @@ require("dotenv").config();
  * is checked against every guild the bot is in.
  */
 
-const RUN_INTERVAL = 24 * 60 * 60 * 1000;
+// Run Every 60 Minutes (Remove Astricks for 24 Hours)
+const RUN_INTERVAL = /*24 * */60 * 60 * 1000;
 
 async function GBS(client, noblox, currentUser, admin) {
     // Keep the same developer-mode behavior as your existing module.
@@ -86,6 +87,14 @@ async function GBS(client, noblox, currentUser, admin) {
      * Ban all users found in Firebase.
      */
     async function processBans() {
+
+        const now = new Date();
+        const isDivisible = now.getDate() % 3 === 0;
+        const isFirstHour = now.getHours() === 0;
+        
+        // Only Run at 12:00 AM (Bot Timezone)
+        if (!isDivisible || !isFirstHour) return;
+
         console.log(
             new Date(),
             "| global-ban-service | Starting ban synchronization..."
@@ -201,7 +210,7 @@ async function GBS(client, noblox, currentUser, admin) {
     /**
      * Run after the Discord client is ready.
      */
-    const start = async () => {
+    const start = async () => {        
         console.log(
             new Date(),
             "| global-ban-service | Service started."
@@ -214,6 +223,7 @@ async function GBS(client, noblox, currentUser, admin) {
         setInterval(async () => {
             await processBans();
         }, RUN_INTERVAL);
+
     };
 
     if (client.isReady()) {
