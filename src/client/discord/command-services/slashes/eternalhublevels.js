@@ -51,8 +51,8 @@ module.exports = {
 
             if (!Number.isFinite(xp)) continue;
 
-            const level = Math.floor(Math.sqrt(xp / 60));
-
+            const level = Math.floor((new_total_points/60) ** .5)
+            console.log(level)
             if (level >= 5) {
                 const discordId = key.startsWith("user_")
                     ? key.substring(5)
