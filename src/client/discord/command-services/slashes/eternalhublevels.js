@@ -165,6 +165,7 @@ module.exports = {
         await interaction.reply({
             components: [createPage(currentPage)],
             flags: MessageFlags.IsComponentsV2,
+            ephemeral: true,
         });
 
         const message = await interaction.fetchReply();
@@ -239,6 +240,7 @@ module.exports = {
 
                 await interaction.editReply({
                     components: [disabledContainer],
+                    ephemeral: true
                 });
 
             } catch (error) {
