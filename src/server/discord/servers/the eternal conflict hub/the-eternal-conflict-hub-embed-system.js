@@ -75,7 +75,7 @@ async function TECHES(client, noblox, currentUser, admin) {
                 message_xp: Number(new_total_points),
             });
 
-            await awardRoles();
+            await awardRoles(new_total_points);
         }
 
         async function awardRoles(new_total_points) {
