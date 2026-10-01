@@ -373,7 +373,15 @@ module.exports = {
 
                     else {
 
+                        const userLeftGroup =
+						    userRank === 0;
+
+                        const shouldRemove =
+                            userLeftGroup ||
+                            binding.removeOnLeave === true;
+
                         if (
+                            shouldRemove &&
                             member.roles.cache.has(
                                 discordRoleId
                             )
