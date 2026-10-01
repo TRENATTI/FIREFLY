@@ -184,7 +184,7 @@ async function logUpdateVerify(client, admin, options = {}) {
 			embeds: [embed],
 		});
 	} catch (error) {
-		console.error("Logger error:", error);
+		console.warn("Logger error:", error);
 	}
 }
 
