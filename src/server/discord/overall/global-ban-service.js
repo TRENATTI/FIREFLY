@@ -105,7 +105,7 @@ async function GBS(client, noblox, currentUser, admin) {
         try {
             bannedUsers = await getBannedDiscordUsers();
         } catch (error) {
-            console.error(
+            console.warn(
                 new Date(),
                 "| global-ban-service | Failed to read Firebase:",
                 error
@@ -192,7 +192,7 @@ async function GBS(client, noblox, currentUser, admin) {
                         `| global-ban-service | Banned ${discordId} (${userInfo.username}) from ${guild.name}`
                     );
                 } catch (error) {
-                    console.error(
+                    console.warn(
                         new Date(),
                         `| global-ban-service | Failed to ban ${discordId} from ${guild.name}:`,
                         error
