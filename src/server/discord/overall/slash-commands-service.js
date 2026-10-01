@@ -25,6 +25,8 @@ function commands(
 	prefix
 ) {
 	client.v14_commands = new Collection(); 
+	client.v14_cooldowns = new Collection();
+	
 	const commands = [];
 	for (const file of moduleFiles) {
 
@@ -69,6 +71,40 @@ function commands(
 			const command = client.v14_commands.get(interaction.commandName); //-- Discord.js V14 Tutorial
 			
 			if (!command) return;
+
+			const cooldown = command.subdata?.cooldown;
+
+			if (cooldown) {
+
+				const cooldownKey =
+					`${interaction.commandName}-${interaction.user.id}`;
+
+				const now = Date.now();
+				const expiration = client.v14_cooldowns.get(cooldownKey);
+
+				if (expiration && now < expiration) {
+
+					const remaining =
+						((expiration - now) / 1000).toFixed(1);
+
+					return interaction.reply({
+						content: `⏳ You are on cooldown for this command. Please wait **${remaining} seconds**.`,
+						ephemeral: true,
+					});
+				}
+
+				// Set cooldown
+				client.v14_cooldowns.set(
+					cooldownKey,
+					now + (cooldown * 1000)
+				);
+
+				// Automatically remove it after cooldown
+				setTimeout(() => {
+					client.v14_cooldowns.delete(cooldownKey);
+				}, cooldown * 1000);
+			}
+
 
 			try {
 				await command.execute(interaction, noblox, admin);
