@@ -914,7 +914,7 @@ module.exports = function (
 
 						} catch (error) {
 
-							console.error(
+							console.warn(
 
 								new Date(),
 								"| verification.js |",
@@ -1831,7 +1831,7 @@ module.exports = function (
 
 					} catch (error) {
 
-						console.error(
+						console.warn(
 
 							new Date(),
 							"| verification.js |",
@@ -2150,7 +2150,7 @@ module.exports = function (
 
 			} catch (error) {
 
-				console.error(
+				console.warn(
 
 					new Date(),
 					"| verification.js |",
@@ -2186,7 +2186,7 @@ module.exports = function (
 
 					} catch (editError) {
 
-						console.error(
+						console.warn(
 
 							new Date(),
 							"| verification.js |",
@@ -2216,7 +2216,7 @@ module.exports = function (
 
 				} catch (replyError) {
 
-					console.error(
+					console.warn(
 
 						new Date(),
 						"| verification.js |",
