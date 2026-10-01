@@ -35,6 +35,14 @@ module.exports = {
                 .setRequired(true)
         )
 
+        .addRoleOption(option =>
+            option
+                .setName("discord-role")
+                .setDescription(
+                    "The Discord role to bind."
+                )
+                .setRequired(true)
+        )        
         .addIntegerOption(option =>
             option
                 .setName("rank")
@@ -44,16 +52,8 @@ module.exports = {
                 .setRequired(false)
                 .setMinValue(0)
                 .setMaxValue(255)
-        )
-
-        .addRoleOption(option =>
-            option
-                .setName("discord-role")
-                .setDescription(
-                    "The Discord role to bind."
-                )
-                .setRequired(true)
         ),
+
 
     subdata: {
         cooldown: 3,
