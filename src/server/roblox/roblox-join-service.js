@@ -1,7 +1,6 @@
 require("dotenv").config();
 
 const axios = require("axios");
-const admin = require("firebase-admin");
 
 
 async function RJS(
@@ -33,6 +32,12 @@ async function RJS(
 		"1339624322221998133";
 
 
+	// Poll every 10 seconds.
+	// This is similar to noblox's normal
+	// onJoinRequestHandle polling interval.
+	const POLL_INTERVAL = 10000;
+
+
 	console.log(
 		new Date(),
 		"| roblox-join-service.js |",
@@ -48,6 +53,7 @@ async function RJS(
 		DISCORD_GUILD_ID
 	);
 
+
 	const channel = await guild.channels.fetch(
 		DISCORD_CHANNEL_ID
 	);
@@ -61,23 +67,178 @@ async function RJS(
 
 
 	// ======================================
-	// ROBLOX CSRF
+	// ROBLOX
 	// ======================================
+
+	const ROBLOX_COOKIE =
+		process.env.RBXCOOKIE;
+
 
 	let xCsrfToken = "";
 
 
+	// Prevent the same request from being
+	// processed more than once while a poll
+	// is still running.
+	const processingRequests = new Set();
+
+
+	// ======================================
+	// SLEEP
+	// ======================================
+
 	function sleep(ms) {
 
 		return new Promise(resolve => {
-			setTimeout(resolve, ms);
+
+			setTimeout(
+				resolve,
+				ms
+			);
+
 		});
 
 	}
 
 
 	// ======================================
-	// ROBLOX GROUP BAN
+	// ROBLOX REQUEST
+	// ======================================
+
+	async function robloxRequest(
+		method,
+		url,
+		data = ""
+	) {
+
+		let response;
+
+
+		try {
+
+			response = await axios({
+
+				method,
+
+				url,
+
+				data,
+
+				headers: {
+
+					Cookie:
+						`.ROBLOSECURITY=${ROBLOX_COOKIE}`,
+
+					"x-csrf-token":
+						xCsrfToken,
+
+					"Content-Type":
+						"application/json"
+
+				},
+
+				validateStatus:
+					() => true
+
+			});
+
+		} catch (error) {
+
+			console.log(
+				new Date(),
+				"| roblox-join-service.js |",
+				"Roblox request error:",
+				error.message
+			);
+
+
+			throw error;
+
+		}
+
+
+		// ======================================
+		// CSRF TOKEN
+		// ======================================
+
+		if (
+			response.status === 403 &&
+			response.headers["x-csrf-token"]
+		) {
+
+			xCsrfToken =
+				response.headers["x-csrf-token"];
+
+
+			console.log(
+				new Date(),
+				"| roblox-join-service.js |",
+				"Updated Roblox X-CSRF token."
+			);
+
+
+			// Retry the original request
+			response = await axios({
+
+				method,
+
+				url,
+
+				data,
+
+				headers: {
+
+					Cookie:
+						`.ROBLOSECURITY=${ROBLOX_COOKIE}`,
+
+					"x-csrf-token":
+						xCsrfToken,
+
+					"Content-Type":
+						"application/json"
+
+				},
+
+				validateStatus:
+					() => true
+
+			});
+
+		}
+
+
+		// ======================================
+		// RATE LIMIT
+		// ======================================
+
+		if (response.status === 429) {
+
+			console.log(
+				new Date(),
+				"| roblox-join-service.js |",
+				"Roblox rate limited request. Waiting 10 seconds..."
+			);
+
+
+			await sleep(10000);
+
+
+			return robloxRequest(
+				method,
+				url,
+				data
+			);
+
+		}
+
+
+		return response;
+
+	}
+
+
+	// ======================================
+	// BAN USER FROM GROUP
 	// ======================================
 
 	async function banFromGroup(userId) {
@@ -88,93 +249,12 @@ async function RJS(
 
 		try {
 
-			let response = await axios.post(
-				url,
-				"",
-				{
-					headers: {
-
-						Cookie:
-							`.ROBLOSECURITY=${process.env.RBXCOOKIE}`,
-
-						"x-csrf-token":
-							xCsrfToken,
-
-						"Content-Length":
-							"0"
-
-					},
-
-					validateStatus:
-						() => true
-				}
-			);
-
-
-			// ======================================
-			// CSRF TOKEN
-			// ======================================
-
-			if (
-				response.status === 403 &&
-				response.headers["x-csrf-token"]
-			) {
-
-				xCsrfToken =
-					response.headers["x-csrf-token"];
-
-
-				console.log(
-					new Date(),
-					"| roblox-join-service.js |",
-					"Updated Roblox CSRF token."
-				);
-
-
-				response = await axios.post(
+			const response =
+				await robloxRequest(
+					"POST",
 					url,
-					"",
-					{
-						headers: {
-
-							Cookie:
-								`.ROBLOSECURITY=${process.env.RBXCOOKIE}`,
-
-							"x-csrf-token":
-								xCsrfToken,
-
-							"Content-Length":
-								"0"
-
-						},
-
-						validateStatus:
-							() => true
-					}
+					""
 				);
-
-			}
-
-
-			// ======================================
-			// RATE LIMIT
-			// ======================================
-
-			if (response.status === 429) {
-
-				console.log(
-					new Date(),
-					"| roblox-join-service.js |",
-					"Roblox rate limited ban request. Retrying..."
-				);
-
-
-				await sleep(10000);
-
-
-				return banFromGroup(userId);
-
-			}
 
 
 			// ======================================
@@ -195,6 +275,27 @@ async function RJS(
 
 
 				return true;
+
+			}
+
+
+			// ======================================
+			// ALREADY BANNED
+			// ======================================
+
+			if (
+				response.status === 400 ||
+				response.status === 404
+			) {
+
+				console.log(
+					new Date(),
+					"| roblox-join-service.js |",
+					"Ban request returned:",
+					response.status,
+					userId,
+					response.data
+				);
 
 			}
 
@@ -223,18 +324,8 @@ async function RJS(
 				"| roblox-join-service.js |",
 				"Group ban error:",
 				userId,
-				error.response?.status ||
-					error.message
+				error.message
 			);
-
-
-			if (error.response?.data) {
-
-				console.log(
-					error.response.data
-				);
-
-			}
 
 
 			return false;
@@ -253,7 +344,9 @@ async function RJS(
 		try {
 
 			const snapshot =
-				await db.ref("blacklist").once("value");
+				await db
+					.ref("blacklist")
+					.once("value");
 
 
 			return snapshot.val() || {};
@@ -282,22 +375,35 @@ async function RJS(
 	function getRobloxIds(value) {
 
 		if (!value) {
+
 			return [];
+
 		}
 
 
 		if (Array.isArray(value)) {
 
 			return value
-				.map(id => String(id).trim())
+
+				.map(
+					id =>
+						String(id).trim()
+				)
+
 				.filter(Boolean);
 
 		}
 
 
 		return String(value)
+
 			.split(",")
-			.map(id => id.trim())
+
+			.map(
+				id =>
+					id.trim()
+			)
+
 			.filter(Boolean);
 
 	}
@@ -330,7 +436,9 @@ async function RJS(
 		// ======================================
 
 		for (
-			const key of Object.keys(userBlacklist)
+			const key of Object.keys(
+				userBlacklist
+			)
 		) {
 
 			const entry =
@@ -338,7 +446,9 @@ async function RJS(
 
 
 			if (!entry) {
+
 				continue;
+
 			}
 
 
@@ -383,7 +493,9 @@ async function RJS(
 		// ======================================
 
 		for (
-			const key of Object.keys(groupBlacklist)
+			const key of Object.keys(
+				groupBlacklist
+			)
 		) {
 
 			const entry =
@@ -391,7 +503,9 @@ async function RJS(
 
 
 			if (!entry) {
+
 				continue;
+
 			}
 
 
@@ -400,7 +514,9 @@ async function RJS(
 
 
 			if (!groupId) {
+
 				continue;
+
 			}
 
 
@@ -418,7 +534,9 @@ async function RJS(
 				// ======================================
 
 				if (rank === 0) {
+
 					continue;
+
 				}
 
 
@@ -504,28 +622,240 @@ async function RJS(
 
 
 	// ======================================
-	// JOIN REQUEST HANDLER
+	// GET JOIN REQUESTS
 	// ======================================
 
-	const evt =
-		noblox.onJoinRequestHandle(
-			GROUP_ID
+	async function getJoinRequests() {
+
+		const url =
+			`https://groups.roblox.com/v1/groups/${GROUP_ID}/join-requests?sortOrder=Asc&limit=100`;
+
+
+		const response =
+			await robloxRequest(
+				"GET",
+				url
+			);
+
+
+		// ======================================
+		// SUCCESS
+		// ======================================
+
+		if (
+			response.status >= 200 &&
+			response.status < 300
+		) {
+
+			return response.data?.data || [];
+
+		}
+
+
+		// ======================================
+		// AUTH FAILURE
+		// ======================================
+
+		if (
+			response.status === 401 ||
+			response.status === 403
+		) {
+
+			console.log(
+				new Date(),
+				"| roblox-join-service.js |",
+				"Join request authentication failed:",
+				response.status,
+				response.data
+			);
+
+		} else {
+
+			console.log(
+				new Date(),
+				"| roblox-join-service.js |",
+				"Failed to retrieve join requests:",
+				response.status,
+				response.data
+			);
+
+		}
+
+
+		return [];
+
+	}
+
+
+	// ======================================
+	// HANDLE JOIN REQUEST
+	// ======================================
+
+	async function handleJoinRequest(
+		userId,
+		accept
+	) {
+
+		const url =
+			`https://groups.roblox.com/v1/groups/${GROUP_ID}/join-requests/users/${userId}`;
+
+
+		try {
+
+			let response;
+
+
+			if (accept) {
+
+				response =
+					await robloxRequest(
+						"POST",
+						url,
+						""
+					);
+
+			} else {
+
+				response =
+					await robloxRequest(
+						"DELETE",
+						url
+					);
+
+			}
+
+
+			// ======================================
+			// SUCCESS
+			// ======================================
+
+			if (
+				response.status >= 200 &&
+				response.status < 300
+			) {
+
+				console.log(
+					new Date(),
+					"| roblox-join-service.js |",
+					accept
+						? "Accepted:"
+						: "Denied:",
+					userId
+				);
+
+
+				return true;
+
+			}
+
+
+			// ======================================
+			// ALREADY PROCESSED
+			// ======================================
+
+			if (
+				response.status === 400 ||
+				response.status === 404
+			) {
+
+				console.log(
+					new Date(),
+					"| roblox-join-service.js |",
+					"Join request no longer exists:",
+					userId,
+					response.status
+				);
+
+
+				return false;
+
+			}
+
+
+			// ======================================
+			// FAILURE
+			// ======================================
+
+			console.log(
+				new Date(),
+				"| roblox-join-service.js |",
+				"Failed to",
+				accept
+					? "accept"
+					: "deny",
+				"user:",
+				userId,
+				"Status:",
+				response.status,
+				response.data
+			);
+
+
+			return false;
+
+		} catch (error) {
+
+			console.log(
+				new Date(),
+				"| roblox-join-service.js |",
+				"Join request handling error:",
+				userId,
+				error.message
+			);
+
+
+			return false;
+
+		}
+
+	}
+
+
+	// ======================================
+	// PROCESS JOIN REQUEST
+	// ======================================
+
+	async function processJoinRequest(
+		request
+	) {
+
+		const userId =
+			request.requester.userId;
+
+
+		const username =
+			request.requester.username;
+
+
+		// ======================================
+		// DUPLICATE CHECK
+		// ======================================
+
+		if (
+			processingRequests.has(
+				String(userId)
+			)
+		) {
+
+			return;
+
+		}
+
+
+		processingRequests.add(
+			String(userId)
 		);
 
 
-	evt.on(
-		"data",
-		async function(request) {
+		try {
 
 			console.log(
 				Date.now(),
 				"| roblox-join-service.js |",
-				"Request made..."
+				"Request made:",
+				username,
+				userId
 			);
-
-
-			const userId =
-				request.requester.userId;
 
 
 			// ======================================
@@ -538,17 +868,15 @@ async function RJS(
 			try {
 
 				blacklistMatch =
-					await checkBlacklist(userId);
+					await checkBlacklist(
+						userId
+					);
 
 			} catch (error) {
 
 				// ======================================
 				// FAIL CLOSED
 				// ======================================
-				//
-				// If the blacklist cannot be checked,
-				// do NOT allow the user into the group.
-				//
 
 				console.log(
 					new Date(),
@@ -558,14 +886,13 @@ async function RJS(
 				);
 
 
-				evt.emit(
-					"handle",
-					request,
+				await handleJoinRequest(
+					userId,
 					false
 				);
 
 
-				getUserThumbnail(
+				await getUserThumbnail(
 					request,
 					false
 				);
@@ -580,7 +907,9 @@ async function RJS(
 			// BLACKLISTED
 			// ======================================
 
-			if (blacklistMatch.matched) {
+			if (
+				blacklistMatch.matched
+			) {
 
 				console.log(
 					new Date(),
@@ -595,23 +924,18 @@ async function RJS(
 
 
 				// ======================================
-				// ALWAYS DENY JOIN REQUEST
+				// ALWAYS DENY
 				// ======================================
 
-				evt.emit(
-					"handle",
-					request,
+				await handleJoinRequest(
+					userId,
 					false
 				);
 
 
 				// ======================================
-				// PERMANENT BLACKLIST
+				// PERMANENT = BAN
 				// ======================================
-				//
-				// Permanent blacklist:
-				// deny request AND ban from Vyhalla.
-				//
 
 				if (
 					blacklistMatch.permanent === true
@@ -628,7 +952,7 @@ async function RJS(
 				// AUDIT
 				// ======================================
 
-				getUserThumbnail(
+				await getUserThumbnail(
 					request,
 					false
 				);
@@ -640,35 +964,112 @@ async function RJS(
 
 
 			// ======================================
-			// NOT BLACKLISTED
+			// ACCEPT
 			// ======================================
-			//
-			// Accept the request.
-			//
 
-			evt.emit(
-				"handle",
+			await handleJoinRequest(
+				userId,
+				true
+			);
+
+
+			console.log(
+				new Date(),
+				"| roblox-join-service.js |",
+				"Accepted!",
+				userId
+			);
+
+
+			await getUserThumbnail(
 				request,
-				true,
-				function() {
+				true
+			);
 
-					console.log(
-						new Date(),
-						"| roblox-join-service.js |",
-						"Accepted!",
-						userId
-					);
+		} catch (error) {
 
+			console.log(
+				new Date(),
+				"| roblox-join-service.js |",
+				"Request processing error:",
+				userId,
+				error
+			);
 
-					getUserThumbnail(
-						request,
-						true
-					);
+		} finally {
 
-				}
+			processingRequests.delete(
+				String(userId)
 			);
 
 		}
+
+	}
+
+
+	// ======================================
+	// POLL JOIN REQUESTS
+	// ======================================
+
+	async function pollJoinRequests() {
+
+		try {
+
+			const requests =
+				await getJoinRequests();
+
+
+			if (
+				!Array.isArray(requests) ||
+				requests.length === 0
+			) {
+
+				return;
+
+			}
+
+
+			console.log(
+				new Date(),
+				"| roblox-join-service.js |",
+				`Found ${requests.length} join request(s).`
+			);
+
+
+			for (
+				const request of requests
+			) {
+
+				await processJoinRequest(
+					request
+				);
+
+			}
+
+		} catch (error) {
+
+			console.log(
+				new Date(),
+				"| roblox-join-service.js |",
+				"Join request polling error:",
+				error.message
+			);
+
+		}
+
+	}
+
+
+	// ======================================
+	// START POLLING
+	// ======================================
+
+	await pollJoinRequests();
+
+
+	setInterval(
+		pollJoinRequests,
+		POLL_INTERVAL
 	);
 
 
@@ -699,7 +1100,7 @@ async function RJS(
 				response.data.data.length === 0
 			) {
 
-				sendWebhookMessage(
+				await sendWebhookMessage(
 					request,
 					status,
 					false
@@ -711,7 +1112,7 @@ async function RJS(
 					response.data.data[0].imageUrl;
 
 
-				sendWebhookMessage(
+				await sendWebhookMessage(
 					request,
 					status,
 					thumbnail
@@ -729,7 +1130,7 @@ async function RJS(
 			);
 
 
-			sendWebhookMessage(
+			await sendWebhookMessage(
 				request,
 				status,
 				false
@@ -769,7 +1170,9 @@ async function RJS(
 			// ACCEPTED
 			// ======================================
 
-			if (status === true) {
+			if (
+				status === true
+			) {
 
 				const embed = {
 
@@ -779,7 +1182,8 @@ async function RJS(
 
 						{
 
-							name: "Acceptance",
+							name:
+								"Acceptance",
 
 							value:
 								`[${request.requester.username}](https://www.roblox.com/users/${request.requester.userId}/profile) [\`\`${request.requester.userId}\`\`] has been accepted into [Vyhalla](https://www.roblox.com/communities/32498529/Vyhalla)! \nCurrent rank: \`\`${rank}\`\`\nTotal members in Vyhalla: \`\`${vyhalla.memberCount}\`\``
@@ -833,7 +1237,8 @@ async function RJS(
 
 					{
 
-						name: "Rejection",
+						name:
+							"Rejection",
 
 						value:
 							`[${request.requester.username}](https://www.roblox.com/users/${request.requester.userId}/profile) [\`\`${request.requester.userId}\`\`] has been declined into [Vyhalla](https://www.roblox.com/communities/32498529/Vyhalla)! \nCurrent rank: \`\`${rank}\`\`\nTotal members in Vyhalla: \`\`${vyhalla.memberCount}\`\``
@@ -861,8 +1266,10 @@ async function RJS(
 							url: thumbnail
 						}
 						: {
+
 							url:
 								"https://trello.com/1/cards/67add144d5afa78d7c598bc7/attachments/67add175357785742dd68e93/download/VAKC_Logo2_NO_GOLD.png"
+
 						}
 
 			};
@@ -871,7 +1278,6 @@ async function RJS(
 			await channel.send({
 				embeds: [embed]
 			});
-
 
 		} catch (error) {
 
