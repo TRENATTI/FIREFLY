@@ -175,7 +175,7 @@ module.exports = {
 			});
 
 		} catch (error) {
-			console.error("Latest verified users error:", error);
+			console.warn("Latest verified users error:", error);
 
 			return interaction.editReply({
 				content: "Unable to retrieve the latest verified users.",
