@@ -1454,8 +1454,10 @@ function keepAlive(
 								content="width=device-width, initial-scale=1.0"
 							>
 
+							<link rel="icon" href="images/icon.ico" />
+
 							<title>
-								Verification Successful
+								FIREFLY VERIFICATION
 							</title>
 
 							<style>
