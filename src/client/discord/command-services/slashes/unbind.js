@@ -179,7 +179,7 @@ module.exports = {
 
         } catch (error) {
 
-            console.error(
+            console.warn(
                 "Unbind error:",
                 error
             );
