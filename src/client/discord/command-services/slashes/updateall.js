@@ -423,13 +423,6 @@ module.exports = {
                                     binding.groupId
                                 );
 
-
-                            const requiredRank =
-                                Number(
-                                    binding.rank
-                                );
-
-
                             const discordRoleId =
                                 binding.discordRoleId;
 
@@ -458,6 +451,14 @@ module.exports = {
                             // ==========================================
                             // GET ROBLOX RANK
                             // ==========================================
+                            //
+                            // We still need the rank even for an
+                            // entire-group binding because rank 0
+                            // tells us the user is no longer in
+                            // the group.
+                            //
+                            // groupId -> robloxUserId -> rank
+                            // ==========================================
 
                             let userRank;
 
@@ -480,15 +481,21 @@ module.exports = {
                             }
 
 
+                            const robloxUserId =
+                                Number(
+                                    data.robloxID
+                                );
+
+
                             if (
                                 cachedGroup.has(
-                                    Number(data.robloxID)
+                                    robloxUserId
                                 )
                             ) {
 
                                 userRank =
                                     cachedGroup.get(
-                                        Number(data.robloxID)
+                                        robloxUserId
                                     );
 
                             } else {
@@ -496,16 +503,92 @@ module.exports = {
                                 userRank =
                                     await noblox.getRankInGroup(
                                         groupId,
-                                        Number(data.robloxID)
+                                        robloxUserId
                                     );
 
 
                                 cachedGroup.set(
-                                    Number(data.robloxID),
+                                    robloxUserId,
                                     userRank
                                 );
 
                             }
+
+
+                            // ==========================================
+                            // ENTIRE GROUP BINDING
+                            // ==========================================
+                            //
+                            // Any rank greater than 0 means the user
+                            // is currently in the Roblox group.
+                            //
+                            // Rank 0 means the user is not in the group.
+                            // ==========================================
+
+                            if (
+                                binding.entireGroup === true
+                            ) {
+
+                                // ======================================
+                                // USER IS IN GROUP
+                                // ======================================
+
+                                if (
+                                    userRank > 0
+                                ) {
+
+                                    if (
+                                        !member.roles.cache.has(
+                                            discordRoleId
+                                        )
+                                    ) {
+
+                                        rolesToAdd.push(
+                                            discordRole
+                                        );
+
+                                    }
+
+                                }
+
+                                // ======================================
+                                // USER IS NOT IN GROUP
+                                // ======================================
+
+                                else {
+
+                                    if (
+                                        member.roles.cache.has(
+                                            discordRoleId
+                                        )
+                                    ) {
+
+                                        rolesToRemove.push(
+                                            discordRole
+                                        );
+
+                                    }
+
+                                }
+
+
+                                // ======================================
+                                // DONE WITH THIS BINDING
+                                // ======================================
+
+                                continue;
+
+                            }
+
+
+                            // ==========================================
+                            // RANK-SPECIFIC BINDING
+                            // ==========================================
+
+                            const requiredRank =
+                                Number(
+                                    binding.rank
+                                );
 
 
                             // ==========================================
