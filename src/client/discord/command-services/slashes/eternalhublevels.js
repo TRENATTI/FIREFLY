@@ -232,7 +232,7 @@ module.exports = {
                 });
 
             } catch (error) {
-                console.error(
+                console.warn(
                     "Failed to disable level5 buttons:",
                     error
                 );

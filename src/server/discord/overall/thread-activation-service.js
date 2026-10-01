@@ -47,10 +47,10 @@ async function TAS(
                     });
 
                     await new Promise(res => setTimeout(res, 5000));
-                    await msg.delete().catch(console.error);
+                    await msg.delete().catch(console.warn);
                 }
             } catch (error) {
-                console.error(error);
+                console.warn(error);
             }
         }
 

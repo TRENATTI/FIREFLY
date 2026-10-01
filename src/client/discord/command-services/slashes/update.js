@@ -695,7 +695,7 @@ module.exports = {
 
         } catch (error) {
 
-            console.error(
+            console.warn(
                 "Update command error:",
                 error
             );
@@ -729,7 +729,7 @@ module.exports = {
 
             } catch (loggerError) {
 
-                console.error(
+                console.warn(
                     "Failed to log update error:",
                     loggerError
                 );

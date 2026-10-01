@@ -131,7 +131,7 @@ async function getServerData(placeIds) {
       });
 
     } catch (err) {
-      console.error(`Failed for ${place.Name}`, err);
+      console.warn(`Failed for ${place.Name}`, err);
 
       results.push({
         name: place.Name,
@@ -216,7 +216,7 @@ module.exports = {
       await interaction.editReply({ embeds: [embed] });
 
     } catch (err) {
-      console.error(err);
+      console.warn(err);
       await interaction.editReply("⚠️ Failed to fetch stats.");
     }
   },

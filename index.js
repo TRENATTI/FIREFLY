@@ -95,7 +95,7 @@ function startApp(currentUser, client, admin) {
 				// Optional: call a default function from the module
 				// module.default(); 
 			} catch (err) {
-				console.error(new Date(),
+				console.warn(new Date(),
 				"| index.js |",`Error loading ${relativeRequirePath}:`, err);
 			}
 			}

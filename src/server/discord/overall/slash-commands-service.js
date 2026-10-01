@@ -62,7 +62,7 @@ function commands(
 				`| slashes.js | Successfully reloaded ${data.length} application (/) commands.`
 			);
 		} catch (error) {
-			console.error(new Date(), `| commands.js |`, error);
+			console.warn(new Date(), `| commands.js |`, error);
 		}
 	})();
 

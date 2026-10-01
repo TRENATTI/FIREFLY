@@ -88,7 +88,7 @@ module.exports = {
 			for (let i = 0; i < parts.length; i++) {
 				interaction.reply({
 					content: `${parts[i]}`
-				}).catch(console.error);
+				}).catch(console.warn);
 			}
 		}
 		async function createButtonBuilder(interactionembed) {
@@ -114,7 +114,7 @@ module.exports = {
 					components: [start_bldisplay_actionrowbuilder],
 				})
 				.then(() => console.log(`Reply edited.`))
-				.catch(console.error);
+				.catch(console.warn);
 
 			const profile_to_groups_filter = (profile_to_groups_i) =>
 				profile_to_groups_i.user.id === interaction.user.id;

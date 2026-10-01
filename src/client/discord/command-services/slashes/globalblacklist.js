@@ -128,7 +128,7 @@ module.exports = {
                 try {
                     bannedUsers = await getBannedDiscordUsers();
                 } catch (error) {
-                    console.error(
+                    console.warn(
                         new Date(),
                         "| globalban-command | Failed to read Firebase:",
                         error
@@ -215,7 +215,7 @@ module.exports = {
                                 `| globalban-command | Banned ${discordId} (${userInfo.username}) from ${guild.name}`
                             );
                         } catch (error) {
-                            console.error(
+                            console.warn(
                                 new Date(),
                                 `| globalban-command | Failed to ban ${discordId} from ${guild.name}:`,
                                 error

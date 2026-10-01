@@ -155,7 +155,7 @@ module.exports = {
                 });
 
             } catch (error) {
-                console.error(
+                console.warn(
                     new Date(),
                     '| profile.js |',
                     `${interaction.user.username} [${interaction.user.id}] failed to run an interaction!`,

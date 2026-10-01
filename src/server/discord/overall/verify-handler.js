@@ -66,9 +66,11 @@ module.exports = function (
 								json.data[0] &&
 								json.data[0].imageUrl
 							) {
+
 								return resolve(
 									json.data[0].imageUrl
 								);
+
 							}
 
 						} catch (error) {}
@@ -90,19 +92,6 @@ module.exports = function (
 	// =========================================================
 	// SYNCHRONIZE ROLES
 	// =========================================================
-	//
-	// Uses the same role binding behavior as /update.
-	//
-	// Matching rank:
-	//      Add the Discord role if missing.
-	//
-	// Non-matching rank:
-	//      Remove the Discord role if present.
-	//
-	// Roblox ranks are cached per group so multiple bindings
-	// belonging to the same Roblox group only require one
-	// getRankInGroup request.
-	// =========================================================
 
 	async function synchronizeRoles(
 		guild,
@@ -120,17 +109,51 @@ module.exports = function (
 		const rolesToRemove = [];
 
 		// =====================================================
+		// BOT MEMBER
+		// =====================================================
+
+		const botMember =
+			guild.members.me;
+
+		if (!botMember) {
+
+			throw new Error(
+				"Could not find the bot member in this guild."
+			);
+
+		}
+
+		// =====================================================
+		// MANAGE ROLES
+		// =====================================================
+
+		if (
+			!botMember.permissions.has("ManageRoles")
+		) {
+
+			throw new Error(
+				"I need the Manage Roles permission to update verification roles."
+			);
+
+		}
+
+		const botHighestRole =
+			botMember.roles.highest;
+
+
+		// =====================================================
 		// VERIFIED ROLE
 		// =====================================================
 
 		let verifiedRole =
 			guild.roles.cache.find(
-				role => role.name === "Verified"
+				role =>
+					role.name === "Verified"
 			);
 
 
 		// =====================================================
-		// CREATE VERIFIED ROLE IF NEEDED
+		// CREATE VERIFIED ROLE
 		// =====================================================
 
 		if (!verifiedRole) {
@@ -140,7 +163,8 @@ module.exports = function (
 				verifiedRole =
 					await guild.roles.create({
 
-						name: "Verified",
+						name:
+							"Verified",
 
 						reason:
 							"Created automatically by the verification system."
@@ -154,7 +178,8 @@ module.exports = function (
 					error
 				);
 
-				verifiedRole = null;
+				verifiedRole =
+					null;
 
 			}
 
@@ -168,10 +193,9 @@ module.exports = function (
 		if (verifiedRole) {
 
 			if (
-				verifiedRole.id !== guild.id &&
 				!verifiedRole.managed &&
 				verifiedRole.position <
-					guild.members.me.roles.highest.position
+					botHighestRole.position
 			) {
 
 				if (
@@ -189,12 +213,22 @@ module.exports = function (
 			} else {
 
 				console.warn(
-					"Cannot add Verified role: role is higher than or equal to the bot's highest role."
+
+					`Cannot manage Verified role "${verifiedRole.name}". ` +
+					`Role position: ${verifiedRole.position}, ` +
+					`Bot highest role position: ${botHighestRole.position}.`
+
 				);
 
 			}
 
 		}
+
+
+		// =====================================================
+		// ROBLOX RANK CACHE
+		// =====================================================
+
 		const rankCache =
 			new Map();
 
@@ -208,13 +242,15 @@ module.exports = function (
 				bindingId,
 				binding
 			]
-			of Object.entries(bindings || {})
+			of Object.entries(
+				bindings || {}
+			)
 		) {
 
 			try {
 
 				// =================================================
-				// VALIDATE BINDING
+				// VALIDATE
 				// =================================================
 
 				if (
@@ -234,7 +270,9 @@ module.exports = function (
 					);
 
 				const discordRoleId =
-					binding.discordRoleId;
+					String(
+						binding.discordRoleId
+					);
 
 
 				// =================================================
@@ -259,20 +297,33 @@ module.exports = function (
 
 
 				// =================================================
-				// GET ROBLOX RANK
+				// CHECK ROLE HIERARCHY
 				// =================================================
-				//
-				// This is required for BOTH:
-				//
-				// 1. Rank-specific bindings
-				// 2. Entire-group bindings
-				//
-				// Rank 0 means the user is not in the group.
-				// Any rank above 0 means they are in the group.
+
+				if (
+					discordRole.managed ||
+					discordRole.position >=
+						botHighestRole.position
+				) {
+
+					console.warn(
+
+						`Cannot manage role "${discordRole.name}" (${discordRole.id}). ` +
+						`Role position: ${discordRole.position}, ` +
+						`Bot highest role position: ${botHighestRole.position}.`
+
+					);
+
+					continue;
+
+				}
+
+
+				// =================================================
+				// GET ROBLOX RANK
 				// =================================================
 
 				let userRank;
-
 
 				if (
 					rankCache.has(
@@ -289,8 +340,13 @@ module.exports = function (
 
 					userRank =
 						await noblox.getRankInGroup(
+
 							groupId,
-							Number(robloxUserId)
+
+							Number(
+								robloxUserId
+							)
+
 						);
 
 					rankCache.set(
@@ -302,18 +358,7 @@ module.exports = function (
 
 
 				// =================================================
-				// ENTIRE GROUP BINDING
-				// =================================================
-				//
-				// Example:
-				//
-				// entireGroup: true
-				//
-				// Any Roblox rank > 0:
-				//     ADD ROLE
-				//
-				// Rank 0:
-				//     REMOVE ROLE
+				// ENTIRE GROUP
 				// =================================================
 
 				if (
@@ -362,11 +407,6 @@ module.exports = function (
 
 					}
 
-
-					// =============================================
-					// SKIP RANK-SPECIFIC LOGIC
-					// =============================================
-
 					continue;
 
 				}
@@ -382,7 +422,10 @@ module.exports = function (
 				) {
 
 					console.warn(
-						`Binding ${bindingId} has no rank and is not marked as an entire-group binding.`
+
+						`Binding ${bindingId} has no rank ` +
+						`and is not marked as an entire-group binding.`
+
 					);
 
 					continue;
@@ -429,11 +472,9 @@ module.exports = function (
 					const userLeftGroup =
 						userRank === 0;
 
-
 					const shouldRemove =
 						userLeftGroup ||
 						binding.removeOnLeave === true;
-
 
 					if (
 						shouldRemove &&
@@ -453,8 +494,11 @@ module.exports = function (
 			} catch (error) {
 
 				console.warn(
+
 					`Failed to process binding ${bindingId}:`,
+
 					error
+
 				);
 
 			}
@@ -463,25 +507,37 @@ module.exports = function (
 
 
 		// =====================================================
-		// CHECK MANAGE ROLES
+		// REMOVE DUPLICATE ADDITIONS
 		// =====================================================
 
-		if (
-			!guild.members.me ||
-			!guild.members.me.permissions.has(
-				"ManageRoles"
-			)
-		) {
+		const uniqueRolesToAdd =
+			[
+				...new Map(
+					rolesToAdd.map(
+						role => [
+							role.id,
+							role
+						]
+					)
+				).values()
+			];
 
-			throw new Error(
-				"I need the Manage Roles permission to update verification roles."
-			);
 
-		}
+		// =====================================================
+		// REMOVE DUPLICATE REMOVALS
+		// =====================================================
 
-
-		const botHighestRole =
-			guild.members.me.roles.highest;
+		const uniqueRolesToRemove =
+			[
+				...new Map(
+					rolesToRemove.map(
+						role => [
+							role.id,
+							role
+						]
+					)
+				).values()
+			];
 
 
 		// =====================================================
@@ -492,20 +548,22 @@ module.exports = function (
 
 		for (
 			const role
-			of rolesToAdd
+			of uniqueRolesToAdd
 		) {
 
 			try {
 
 				if (
-					role.id === guild.id ||
 					role.managed ||
 					role.position >=
 						botHighestRole.position
 				) {
 
 					console.warn(
-						`Cannot add role ${role.name}: role is higher than or equal to the bot's highest role.`
+
+						`Cannot add role "${role.name}". ` +
+						`It is not below the bot's highest role.`
+
 					);
 
 					continue;
@@ -513,19 +571,34 @@ module.exports = function (
 				}
 
 
-				await member.roles.add(
-					role
-				);
+				if (
+					!member.roles.cache.has(
+						role.id
+					)
+				) {
 
-				addedRoles.push(
-					role
-				);
+					await member.roles.add(
+
+						role,
+
+						"Roblox verification role synchronization."
+
+					);
+
+					addedRoles.push(
+						role
+					);
+
+				}
 
 			} catch (error) {
 
 				console.warn(
+
 					`Failed to add role ${role.name}:`,
+
 					error
+
 				);
 
 			}
@@ -541,20 +614,22 @@ module.exports = function (
 
 		for (
 			const role
-			of rolesToRemove
+			of uniqueRolesToRemove
 		) {
 
 			try {
 
 				if (
-					role.id === guild.id ||
 					role.managed ||
 					role.position >=
 						botHighestRole.position
 				) {
 
 					console.warn(
-						`Cannot remove role ${role.name}: role is higher than or equal to the bot's highest role.`
+
+						`Cannot remove role "${role.name}". ` +
+						`It is not below the bot's highest role.`
+
 					);
 
 					continue;
@@ -562,19 +637,34 @@ module.exports = function (
 				}
 
 
-				await member.roles.remove(
-					role
-				);
+				if (
+					member.roles.cache.has(
+						role.id
+					)
+				) {
 
-				removedRoles.push(
-					role
-				);
+					await member.roles.remove(
+
+						role,
+
+						"Roblox verification role synchronization."
+
+					);
+
+					removedRoles.push(
+						role
+					);
+
+				}
 
 			} catch (error) {
 
 				console.warn(
+
 					`Failed to remove role ${role.name}:`,
+
 					error
+
 				);
 
 			}
@@ -583,8 +673,10 @@ module.exports = function (
 
 
 		return {
+
 			addedRoles,
 			removedRoles
+
 		};
 
 	}
@@ -594,166 +686,223 @@ module.exports = function (
 	// INTERACTION HANDLER
 	// =========================================================
 
-	client.on("interactionCreate", async (interaction) => {
+	client.on(
+		"interactionCreate",
+		async (interaction) => {
 
-		try {
-
-			// =====================================================
-			// START VERIFICATION
-			// =====================================================
-
-			if (
-				interaction.isButton() &&
-				interaction.customId ===
-					"verification_channel_start"
-			) {
-
-				if (!interaction.guild) {
-
-					return interaction.reply({
-						content:
-							"This verification system can only be used in a server.",
-						flags:
-							MessageFlags.Ephemeral,
-					});
-
-				}
-
-
-				const db =
-					admin.database();
-
+			try {
 
 				// =================================================
-				// CHECK VERIFICATION CHANNEL
-				// =================================================
-
-				const channelRef =
-					db
-						.ref("system")
-						.child("verification_channels")
-						.child(
-							interaction.guild.id
-						);
-
-				const channelSnapshot =
-					await channelRef.once("value");
-
-
-				if (
-					!channelSnapshot.exists()
-				) {
-
-					return interaction.reply({
-						content:
-							"This verification system is not currently bound.",
-						flags:
-							MessageFlags.Ephemeral,
-					});
-
-				}
-
-
-				const channelData =
-					channelSnapshot.val();
-
-
-				if (
-					channelData.channelId !==
-					interaction.channel.id
-				) {
-
-					return interaction.reply({
-						content:
-							"This verification button is not being used in the bound verification channel.",
-						flags:
-							MessageFlags.Ephemeral,
-					});
-
-				}
-
-
-				// =================================================
-				// GET VERIFICATION DATA
-				// =================================================
-
-				const userRef =
-					db
-						.ref("system")
-						.child("user_verification")
-						.child(
-							`discord_${interaction.user.id}`
-						);
-
-				const existingSnapshot =
-					await userRef.once("value");
-
-				const existingData =
-					existingSnapshot.exists()
-						? existingSnapshot.val()
-						: null;
-
-
-				// =================================================
-				// ALREADY VERIFIED
-				// =================================================
-				//
-				// Clicking Verify when already verified now
-				// synchronizes the user's Discord roles and
-				// nickname with their Roblox account.
+				// START VERIFICATION
 				// =================================================
 
 				if (
-					existingData &&
-					existingData.verified === true &&
-					existingData.robloxUsername &&
-					existingData.robloxID
+					interaction.isButton() &&
+					interaction.customId ===
+						"verification_channel_start"
 				) {
 
-					const member =
-						await interaction.guild.members
-							.fetch(
-								interaction.user.id
-							)
-							.catch(() => null);
-
-
-					if (!member) {
+					if (!interaction.guild) {
 
 						return interaction.reply({
+
 							content:
-								"I could not find your Discord member information.",
+								"This verification system can only be used in a server.",
+
 							flags:
 								MessageFlags.Ephemeral,
+
 						});
 
 					}
 
 
-					let addedRoles = [];
-					let removedRoles = [];
+					const db =
+						admin.database();
 
 
-					// =============================================
-					// SYNCHRONIZE ROLES
-					// =============================================
+					// =================================================
+					// CHECK VERIFICATION CHANNEL
+					// =================================================
+
+					const channelRef =
+						db
+							.ref("system")
+							.child("verification_channels")
+							.child(
+								interaction.guild.id
+							);
+
+
+					const channelSnapshot =
+						await channelRef.once(
+							"value"
+						);
+
 
 					if (
-						interaction.guild.members.me &&
-						interaction.guild.members.me.permissions.has(
-							"ManageRoles"
-						)
+						!channelSnapshot.exists()
 					) {
+
+						return interaction.reply({
+
+							content:
+								"This verification system is not currently bound.",
+
+							flags:
+								MessageFlags.Ephemeral,
+
+						});
+
+					}
+
+
+					const channelData =
+						channelSnapshot.val();
+
+
+					if (
+						channelData.channelId !==
+						interaction.channel.id
+					) {
+
+						return interaction.reply({
+
+							content:
+								"This verification button is not being used in the bound verification channel.",
+
+							flags:
+								MessageFlags.Ephemeral,
+
+						});
+
+					}
+
+
+					// =================================================
+					// GET VERIFICATION DATA
+					// =================================================
+
+					const userRef =
+						db
+							.ref("system")
+							.child("user_verification")
+							.child(
+								`discord_${interaction.user.id}`
+							);
+
+
+					const existingSnapshot =
+						await userRef.once(
+							"value"
+						);
+
+
+					const existingData =
+						existingSnapshot.exists()
+							? existingSnapshot.val()
+							: null;
+
+
+					// =================================================
+					// ALREADY VERIFIED
+					// =================================================
+
+					if (
+						existingData &&
+						existingData.verified === true &&
+						existingData.robloxUsername &&
+						existingData.robloxID
+					) {
+
+						// =================================================
+						// DEFER IMMEDIATELY
+						// =================================================
+
+						await interaction.deferReply({
+
+							flags:
+								MessageFlags.Ephemeral,
+
+						});
+
+
+						// =================================================
+						// GET MEMBER
+						// =================================================
+
+						const member =
+							await interaction.guild.members
+								.fetch(
+									interaction.user.id
+								)
+								.catch(
+									() => null
+								);
+
+
+						if (!member) {
+
+							return interaction.editReply({
+
+								content:
+									"I could not find your Discord member information.",
+
+							});
+
+						}
+
+
+						// =================================================
+						// BOT MEMBER
+						// =================================================
+
+						const botMember =
+							interaction.guild.members.me;
+
+
+						// =================================================
+						// CHECK MANAGE ROLES
+						// =================================================
+
+						if (
+							!botMember ||
+							!botMember.permissions.has(
+								"ManageRoles"
+							)
+						) {
+
+							return interaction.editReply({
+
+								content:
+									"I need the **Manage Roles** permission to synchronize your verification roles.",
+
+							});
+
+						}
+
+
+						// =================================================
+						// SYNCHRONIZE ROLES
+						// =================================================
+
+						let addedRoles = [];
+						let removedRoles = [];
+
 
 						try {
 
 							const result =
 								await synchronizeRoles(
+
 									interaction.guild,
+
 									member,
+
 									Number(
 										existingData.robloxID
 									)
+
 								);
 
 
@@ -763,43 +912,982 @@ module.exports = function (
 							removedRoles =
 								result.removedRoles;
 
-
 						} catch (error) {
 
-							console.error(
+							console.warn(
+
 								new Date(),
 								"| verification.js |",
 								"Failed to synchronize roles for already verified user:",
 								error
+
+							);
+
+
+							return interaction.editReply({
+
+								content:
+									"I could not synchronize your Discord roles. Please make sure the bot has **Manage Roles** and that its highest role is above the roles it needs to manage.",
+
+							});
+
+						}
+
+
+						// =================================================
+						// SYNCHRONIZE NICKNAME
+						// =================================================
+
+						let nicknameUpdated =
+							false;
+
+
+						const canManageNickname =
+							botMember &&
+							botMember.permissions.has(
+								"ManageNicknames"
+							) &&
+							member.id !==
+								interaction.guild.ownerId &&
+							member.id !==
+								botMember.id &&
+							member.manageable;
+
+
+						if (
+							canManageNickname
+						) {
+
+							try {
+
+								if (
+									member.nickname !==
+									existingData.robloxUsername
+								) {
+
+									await member.setNickname(
+
+										existingData.robloxUsername,
+
+										"Roblox verification synchronization."
+
+									);
+
+									nicknameUpdated =
+										true;
+
+								}
+
+							} catch (error) {
+
+								console.warn(
+
+									new Date(),
+									"| verification.js |",
+									"Failed to update nickname for already verified user:",
+									error
+
+								);
+
+							}
+
+						} else {
+
+							console.warn(
+
+								new Date(),
+								"| verification.js |",
+								`Cannot update nickname for ${member.user.tag}: member is not manageable by the bot.`
+
 							);
 
 						}
 
+
+						// =================================================
+						// LOG UPDATE
+						// =================================================
+
+						try {
+
+							await logUpdateVerify(
+
+								interaction.client,
+
+								admin,
+
+								{
+
+									guildId:
+										interaction.guild.id,
+
+									type:
+										"update",
+
+									discordUser:
+										interaction.user.id,
+
+									robloxUsername:
+										existingData.robloxUsername,
+
+									robloxId:
+										existingData.robloxID,
+
+									nicknameChanged:
+										nicknameUpdated,
+
+									rolesAdded:
+										addedRoles.map(
+											role =>
+												role.id
+										),
+
+									rolesRemoved:
+										removedRoles.map(
+											role =>
+												role.id
+										),
+
+								}
+
+							);
+
+						} catch (loggerError) {
+
+							console.warn(
+								"Failed to log role synchronization:",
+								loggerError
+							);
+
+						}
+
+
+						// =================================================
+						// ROLE CHANGES
+						// =================================================
+
+						const roleChanges = [];
+
+
+						if (
+							addedRoles.length > 0
+						) {
+
+							roleChanges.push(
+
+								`**Roles Added:** ${addedRoles
+									.map(
+										role =>
+											`<@&${role.id}>`
+									)
+									.join(", ")}`
+
+							);
+
+						}
+
+
+						if (
+							removedRoles.length > 0
+						) {
+
+							roleChanges.push(
+
+								`**Roles Removed:** ${removedRoles
+									.map(
+										role =>
+											`<@&${role.id}>`
+									)
+									.join(", ")}`
+
+							);
+
+						}
+
+
+						if (
+							roleChanges.length === 0
+						) {
+
+							roleChanges.push(
+								"No role changes were required."
+							);
+
+						}
+
+
+						// =================================================
+						// NICKNAME RESULT
+						// =================================================
+
+						if (
+							nicknameUpdated
+						) {
+
+							roleChanges.push(
+								"**Nickname:** Updated"
+							);
+
+						} else {
+
+							roleChanges.push(
+								"**Nickname:** Could not be updated due to Discord permissions."
+							);
+
+						}
+
+
+						// =================================================
+						// FINAL RESPONSE
+						// =================================================
+
+						return interaction.editReply({
+
+							content:
+
+								`Your Discord account is already linked to **${existingData.robloxUsername}**.\n\n` +
+
+								`Your verification synchronization has been completed.` +
+
+								`\n\n${roleChanges.join("\n")}` +
+
+								`\n\nIf you need to verify a different Roblox account, use the existing \`/verify reverify\` system.`,
+
+						});
+
 					}
 
 
-					// =============================================
-					// SYNCHRONIZE NICKNAME
-					// =============================================
+					// =================================================
+					// NEW VERIFICATION STATE
+					// =================================================
+
+					const state =
+						crypto
+							.randomBytes(32)
+							.toString("hex");
+
+
+					await userRef.update({
+
+						verificationGuildID:
+							interaction.guild.id,
+
+						verified:
+							false,
+
+						statecode:
+							state,
+
+						discordID:
+							interaction.user.id,
+
+						verificationMethod:
+							null,
+
+						robloxID:
+							null,
+
+						robloxUsername:
+							null,
+
+						robloxDisplayName:
+							null,
+
+						robloxProfile:
+							null,
+
+						verificationCode:
+							null,
+
+						verifiedAt:
+							null,
+
+					});
+
+
+					// =================================================
+					// WEBSITE BUTTON
+					// =================================================
+
+					const websiteButton =
+						new ButtonBuilder()
+
+							.setLabel(
+								"Verify with Website"
+							)
+
+							.setStyle(
+								ButtonStyle.Link
+							)
+
+							.setURL(
+
+								`https://auth.trenati.dev/?state=${encodeURIComponent(state)}`
+
+							);
+
+
+					// =================================================
+					// DESCRIPTION BUTTON
+					// =================================================
+
+					const descriptionButton =
+						new ButtonBuilder()
+
+							.setCustomId(
+								"verification_system_description"
+							)
+
+							.setLabel(
+								"Verify with User Description"
+							)
+
+							.setStyle(
+								ButtonStyle.Secondary
+							);
+
+
+					return interaction.reply({
+
+						content:
+							"Choose how you would like to verify your Roblox account.",
+
+						components:
+
+							[
+
+								new ActionRowBuilder()
+									.addComponents(
+
+										websiteButton,
+
+										descriptionButton
+
+									),
+
+							],
+
+						flags:
+							MessageFlags.Ephemeral,
+
+					});
+
+				}
+
+
+				// =================================================
+				// DESCRIPTION VERIFICATION BUTTON
+				// =================================================
+
+				if (
+					interaction.isButton() &&
+					interaction.customId ===
+						"verification_system_description"
+				) {
+
+					const modal =
+						new ModalBuilder()
+
+							.setCustomId(
+								"verification_system_description_modal"
+							)
+
+							.setTitle(
+								"Roblox Verification"
+							);
+
+
+					const usernameInput =
+						new TextInputBuilder()
+
+							.setCustomId(
+								"roblox_username"
+							)
+
+							.setLabel(
+								"Roblox Username"
+							)
+
+							.setPlaceholder(
+								"Enter your Roblox username"
+							)
+
+							.setStyle(
+								TextInputStyle.Short
+							)
+
+							.setRequired(
+								true
+							);
+
+
+					modal.addComponents(
+
+						new ActionRowBuilder()
+							.addComponents(
+								usernameInput
+							)
+
+					);
+
+
+					return interaction.showModal(
+						modal
+					);
+
+				}
+
+
+				// =================================================
+				// DESCRIPTION VERIFICATION MODAL
+				// =================================================
+
+				if (
+					interaction.isModalSubmit() &&
+					interaction.customId ===
+						"verification_system_description_modal"
+				) {
+
+					const username =
+						interaction
+							.fields
+							.getTextInputValue(
+								"roblox_username"
+							)
+							.trim();
+
+
+					await interaction.deferReply({
+
+						flags:
+							MessageFlags.Ephemeral,
+
+					});
+
+
+					// =================================================
+					// GET ROBLOX USER ID
+					// =================================================
+
+					let robloxUserId;
+
+
+					try {
+
+						robloxUserId =
+							await noblox.getIdFromUsername(
+								username
+							);
+
+					} catch (error) {
+
+						return interaction.editReply({
+
+							content:
+								`I could not find a Roblox account with the username **${username}**.`,
+
+						});
+
+					}
+
+
+					if (!robloxUserId) {
+
+						return interaction.editReply({
+
+							content:
+								`I could not find a Roblox account with the username **${username}**.`,
+
+						});
+
+					}
+
+
+					// =================================================
+					// GET ROBLOX PLAYER INFO
+					// =================================================
+
+					let robloxUser;
+
+
+					try {
+
+						robloxUser =
+							await noblox.getPlayerInfo(
+								robloxUserId
+							);
+
+					} catch (error) {
+
+						return interaction.editReply({
+
+							content:
+								"I could not retrieve information about that Roblox account.",
+
+						});
+
+					}
+
+
+					// =================================================
+					// CREATE DESCRIPTION CODE
+					// =================================================
+
+					const code =
+						`VER-${crypto
+							.randomBytes(2)
+							.toString("hex")
+							.toUpperCase()}`;
+
+
+					const db =
+						admin.database();
+
+
+					const userRef =
+						db
+							.ref("system")
+							.child("user_verification")
+							.child(
+								`discord_${interaction.user.id}`
+							);
+
+
+					const currentSnapshot =
+						await userRef.once(
+							"value"
+						);
+
+
+					const currentData =
+						currentSnapshot.exists()
+							? currentSnapshot.val()
+							: {};
+
+
+					await userRef.update({
+
+						verificationGuildID:
+							currentData.verificationGuildID ||
+							interaction.guild?.id,
+
+						verified:
+							false,
+
+						discordID:
+							interaction.user.id,
+
+						verificationMethod:
+							"description",
+
+						robloxID:
+							Number(
+								robloxUserId
+							),
+
+						robloxUsername:
+							robloxUser.username,
+
+						robloxDisplayName:
+							robloxUser.displayName,
+
+						robloxProfile:
+							`https://www.roblox.com/users/${robloxUserId}/profile`,
+
+						verificationCode:
+							code,
+
+						statecode:
+							currentData.statecode ||
+							null,
+
+						verifiedAt:
+							null,
+
+					});
+
+
+					// =================================================
+					// GET AVATAR
+					// =================================================
+
+					const avatar =
+						await fetchAvatar(
+							robloxUserId
+						);
+
+
+					// =================================================
+					// VERIFICATION EMBED
+					// =================================================
+
+					const embed =
+						new EmbedBuilder()
+
+							.setTitle(
+								"Roblox Verification"
+							)
+
+							.setDescription(
+
+								`To verify that **${robloxUser.username}** is your Roblox account:\n\n` +
+
+								`1. Visit [**your profile**](https://www.roblox.com/users/${robloxUserId}/profile)\n` +
+
+								`2. Add this code to your **About Me**:\n` +
+
+								`\`\`\`${code}\`\`\`\n` +
+
+								`3. Click **Confirm** below once you've done it.`
+
+							)
+
+							.addFields({
+
+								name:
+									"Roblox Profile",
+
+								value:
+									`[${robloxUser.username}](https://www.roblox.com/users/${robloxUserId}/profile)`,
+
+							})
+
+							.setTimestamp();
+
+
+					if (avatar) {
+
+						embed.setThumbnail(
+							avatar
+						);
+
+					}
+
+
+					// =================================================
+					// CONFIRM BUTTON
+					// =================================================
+
+					const confirmButton =
+						new ButtonBuilder()
+
+							.setCustomId(
+								"verification_system_confirm"
+							)
+
+							.setLabel(
+								"Confirm Verification"
+							)
+
+							.setStyle(
+								ButtonStyle.Success
+							);
+
+
+					return interaction.editReply({
+
+						embeds:
+							[embed],
+
+						components:
+
+							[
+
+								new ActionRowBuilder()
+									.addComponents(
+										confirmButton
+									)
+
+							],
+
+					});
+
+				}
+
+
+				// =================================================
+				// CONFIRM DESCRIPTION VERIFICATION
+				// =================================================
+
+				if (
+					interaction.isButton() &&
+					interaction.customId ===
+						"verification_system_confirm"
+				) {
+
+					await interaction.deferReply({
+
+						flags:
+							MessageFlags.Ephemeral,
+
+					});
+
+
+					// =================================================
+					// CHECK GUILD
+					// =================================================
+
+					if (!interaction.guild) {
+
+						return interaction.editReply({
+
+							content:
+								"This verification system can only be used in a server.",
+
+						});
+
+					}
+
+
+					const db =
+						admin.database();
+
+
+					// =================================================
+					// GET VERIFICATION DATA
+					// =================================================
+
+					const userRef =
+						db
+							.ref("system")
+							.child("user_verification")
+							.child(
+								`discord_${interaction.user.id}`
+							);
+
+
+					const snapshot =
+						await userRef.once(
+							"value"
+						);
+
+
+					if (
+						!snapshot.exists()
+					) {
+
+						return interaction.editReply({
+
+							content:
+								"No verification session was found. Please start verification again.",
+
+						});
+
+					}
+
+
+					const data =
+						snapshot.val();
+
+
+					if (
+						!data.robloxID ||
+						!data.verificationCode
+					) {
+
+						return interaction.editReply({
+
+							content:
+								"No active Roblox description verification was found.",
+
+						});
+
+					}
+
+
+					// =================================================
+					// CHECK ROBLOX DESCRIPTION
+					// =================================================
+
+					let blurb;
+
+
+					try {
+
+						blurb =
+							await noblox.getBlurb(
+								Number(
+									data.robloxID
+								)
+							);
+
+					} catch (error) {
+
+						return interaction.editReply({
+
+							content:
+								"I could not retrieve the Roblox profile description right now. Please try again.",
+
+						});
+
+					}
+
+
+					if (
+						typeof blurb !== "string" ||
+						!blurb.includes(
+							data.verificationCode
+						)
+					) {
+
+						return interaction.editReply({
+
+							content:
+
+								`I could not find **${data.verificationCode}** in your Roblox profile description.\n\n` +
+
+								`Add the code to your profile description and try again.`,
+
+						});
+
+					}
+
+
+					// =================================================
+					// GET DISCORD MEMBER
+					// =================================================
+
+					const member =
+						await interaction.guild.members
+							.fetch(
+								interaction.user.id
+							)
+							.catch(
+								() => null
+							);
+
+
+					if (!member) {
+
+						return interaction.editReply({
+
+							content:
+								"I could not find your Discord member information.",
+
+						});
+
+					}
+
+
+					// =================================================
+					// BOT MEMBER
+					// =================================================
+
+					const botMember =
+						interaction.guild.members.me;
+
+
+					// =================================================
+					// CHECK MANAGE ROLES
+					// =================================================
+
+					if (
+						!botMember ||
+						!botMember.permissions.has(
+							"ManageRoles"
+						)
+					) {
+
+						return interaction.editReply({
+
+							content:
+								"I need the **Manage Roles** permission to complete verification.",
+
+						});
+
+					}
+
+
+					// =================================================
+					// SYNCHRONIZE ROLES
+					// =================================================
+
+					let addedRoles = [];
+					let removedRoles = [];
+
+
+					try {
+
+						const result =
+							await synchronizeRoles(
+
+								interaction.guild,
+
+								member,
+
+								Number(
+									data.robloxID
+								)
+
+							);
+
+
+						addedRoles =
+							result.addedRoles;
+
+						removedRoles =
+							result.removedRoles;
+
+					} catch (error) {
+
+						console.warn(
+
+							new Date(),
+							"| verification.js |",
+							"Failed to synchronize verification roles:",
+							error
+
+						);
+
+
+						return interaction.editReply({
+
+							content:
+								"I could not synchronize your Discord roles. Please make sure the bot has **Manage Roles** and its highest role is above the roles it needs to manage.",
+
+						});
+
+					}
+
+
+					// =================================================
+					// UPDATE NICKNAME
+					// =================================================
 
 					let nicknameUpdated =
 						false;
 
 
-					if (
+					const canManageNickname =
+						botMember &&
+						botMember.permissions.has(
+							"ManageNicknames"
+						) &&
 						member.id !==
-						interaction.guild.ownerId
+							interaction.guild.ownerId &&
+						member.id !==
+							botMember.id &&
+						member.manageable;
+
+
+					if (
+						canManageNickname
 					) {
 
 						try {
 
 							if (
 								member.nickname !==
-								existingData.robloxUsername
+								data.robloxUsername
 							) {
 
 								await member.setNickname(
-									existingData.robloxUsername
+
+									data.robloxUsername,
+
+									"Roblox verification."
+
 								);
 
 								nicknameUpdated =
@@ -810,26 +1898,79 @@ module.exports = function (
 						} catch (error) {
 
 							console.warn(
+
 								new Date(),
 								"| verification.js |",
-								"Failed to update nickname for already verified user:",
+								"Failed to update nickname:",
 								error
+
 							);
 
 						}
 
+					} else {
+
+						console.warn(
+
+							new Date(),
+							"| verification.js |",
+							`Cannot update nickname for ${member.user.tag}: member is not manageable by the bot.`
+
+						);
+
 					}
 
 
-					// =============================================
+					// =================================================
+					// MARK VERIFIED
+					// =================================================
+
+					await userRef.update({
+
+						verified:
+							true,
+
+						verificationMethod:
+							"description",
+
+						robloxID:
+							Number(
+								data.robloxID
+							),
+
+						robloxUsername:
+							data.robloxUsername,
+
+						robloxDisplayName:
+							data.robloxDisplayName,
+
+						robloxProfile:
+							data.robloxProfile,
+
+						verificationCode:
+							null,
+
+						statecode:
+							null,
+
+						verifiedAt:
+							Date.now(),
+
+					});
+
+
+					// =================================================
 					// LOG UPDATE
-					// =============================================
+					// =================================================
 
 					try {
 
 						await logUpdateVerify(
+
 							interaction.client,
+
 							admin,
+
 							{
 
 								guildId:
@@ -842,10 +1983,10 @@ module.exports = function (
 									interaction.user.id,
 
 								robloxUsername:
-									existingData.robloxUsername,
+									data.robloxUsername,
 
 								robloxId:
-									existingData.robloxID,
+									data.robloxID,
 
 								nicknameChanged:
 									nicknameUpdated,
@@ -863,21 +2004,22 @@ module.exports = function (
 									),
 
 							}
+
 						);
 
 					} catch (loggerError) {
 
 						console.warn(
-							"Failed to log role synchronization:",
+							"Failed to log verification update:",
 							loggerError
 						);
 
 					}
 
 
-					// =============================================
-					// ROLE MESSAGE
-					// =============================================
+					// =================================================
+					// ROLE RESPONSE
+					// =================================================
 
 					const roleChanges = [];
 
@@ -887,12 +2029,14 @@ module.exports = function (
 					) {
 
 						roleChanges.push(
+
 							`**Roles Added:** ${addedRoles
 								.map(
 									role =>
 										`<@&${role.id}>`
 								)
 								.join(", ")}`
+
 						);
 
 					}
@@ -903,12 +2047,14 @@ module.exports = function (
 					) {
 
 						roleChanges.push(
+
 							`**Roles Removed:** ${removedRoles
 								.map(
 									role =>
 										`<@&${role.id}>`
 								)
 								.join(", ")}`
+
 						);
 
 					}
@@ -925,925 +2071,165 @@ module.exports = function (
 					}
 
 
-					return interaction.reply({
+					// =================================================
+					// NICKNAME RESPONSE
+					// =================================================
+
+					if (
+						nicknameUpdated
+					) {
+
+						roleChanges.push(
+							"**Nickname:** Updated"
+						);
+
+					} else {
+
+						roleChanges.push(
+							"**Nickname:** Could not be updated due to Discord permissions."
+						);
+
+					}
+
+
+					// =================================================
+					// SUCCESS EMBED
+					// =================================================
+
+					const successEmbed =
+						new EmbedBuilder()
+
+							.setTitle(
+								"Verification Complete"
+							)
+
+							.setDescription(
+
+								`Your Roblox account **${data.robloxUsername}** has been successfully verified.`
+
+							)
+
+							.addFields(
+
+								{
+
+									name:
+										"Roblox Account",
+
+									value:
+										`[${data.robloxUsername}](${data.robloxProfile})`,
+
+								},
+
+								{
+
+									name:
+										"Roles",
+
+									value:
+										roleChanges.join("\n"),
+
+								}
+
+							)
+
+							.setTimestamp();
+
+
+					return interaction.editReply({
+
+						embeds:
+							[successEmbed],
+
+						components:
+							[],
+
+					});
+
+				}
+
+			} catch (error) {
+
+				console.warn(
+
+					new Date(),
+					"| verification.js |",
+					"Verification interaction error:",
+					error
+
+				);
+
+
+				// =================================================
+				// SAFE INTERACTION ERROR RESPONSE
+				// =================================================
+
+				if (
+					interaction.deferred ||
+					interaction.replied
+				) {
+
+					try {
+
+						return await interaction.editReply({
+
+							content:
+								"An unexpected error occurred while processing verification.",
+
+							embeds:
+								[],
+
+							components:
+								[],
+
+						});
+
+					} catch (editError) {
+
+						console.warn(
+
+							new Date(),
+							"| verification.js |",
+							"Failed to send deferred interaction error:",
+							editError
+
+						);
+
+					}
+
+					return;
+
+				}
+
+
+				try {
+
+					return await interaction.reply({
 
 						content:
-
-							`Your Discord account is already linked to **${existingData.robloxUsername}**.\n\n` +
-
-							`Your Discord roles and nickname have been synchronized with your Roblox account.` +
-
-							`\n\n${roleChanges.join("\n")}` +
-
-							`\n\nIf you need to verify a different Roblox account, use the existing \`/verify\` reverify system.`,
+							"An unexpected error occurred while processing verification.",
 
 						flags:
 							MessageFlags.Ephemeral,
 
 					});
 
-				}
-
-
-				// =================================================
-				// NEW VERIFICATION STATE
-				// =================================================
-
-				const state =
-					crypto
-						.randomBytes(32)
-						.toString("hex");
-
-
-				await userRef.update({
-
-					verificationGuildID:
-						interaction.guild.id,
-
-					verified:
-						false,
-
-					statecode:
-						state,
-
-					discordID:
-						interaction.user.id,
-
-					verificationMethod:
-						null,
-
-					robloxID:
-						null,
-
-					robloxUsername:
-						null,
-
-					robloxDisplayName:
-						null,
-
-					robloxProfile:
-						null,
-
-					verificationCode:
-						null,
-
-					verifiedAt:
-						null,
-
-				});
-
-
-				// =================================================
-				// WEBSITE BUTTON
-				// =================================================
-
-				const websiteButton =
-					new ButtonBuilder()
-						.setLabel(
-							"Verify with Website"
-						)
-						.setStyle(
-							ButtonStyle.Link
-						)
-						.setURL(
-							`https://auth.trenati.dev/?state=${encodeURIComponent(state)}`
-						);
-
-
-				// =================================================
-				// DESCRIPTION BUTTON
-				// =================================================
-
-				const descriptionButton =
-					new ButtonBuilder()
-						.setCustomId(
-							"verification_system_description"
-						)
-						.setLabel(
-							"Verify with User Description"
-						)
-						.setStyle(
-							ButtonStyle.Secondary
-						);
-
-
-				return interaction.reply({
-
-					content:
-						"Choose how you would like to verify your Roblox account.",
-
-					components: [
-
-						new ActionRowBuilder()
-							.addComponents(
-								websiteButton,
-								descriptionButton
-							),
-
-					],
-
-					flags:
-						MessageFlags.Ephemeral,
-
-				});
-
-			}
-
-
-			// =====================================================
-			// DESCRIPTION VERIFICATION BUTTON
-			// =====================================================
-
-			if (
-				interaction.isButton() &&
-				interaction.customId ===
-					"verification_system_description"
-			) {
-
-				const modal =
-					new ModalBuilder()
-						.setCustomId(
-							"verification_system_description_modal"
-						)
-						.setTitle(
-							"Roblox Verification"
-						);
-
-
-				const usernameInput =
-					new TextInputBuilder()
-						.setCustomId(
-							"roblox_username"
-						)
-						.setLabel(
-							"Roblox Username"
-						)
-						.setPlaceholder(
-							"Enter your Roblox username"
-						)
-						.setStyle(
-							TextInputStyle.Short
-						)
-						.setRequired(
-							true
-						);
-
-
-				modal.addComponents(
-
-					new ActionRowBuilder()
-						.addComponents(
-							usernameInput
-						)
-
-				);
-
-
-				return interaction.showModal(
-					modal
-				);
-
-			}
-
-
-			// =====================================================
-			// DESCRIPTION VERIFICATION MODAL
-			// =====================================================
-
-			if (
-				interaction.isModalSubmit() &&
-				interaction.customId ===
-					"verification_system_description_modal"
-			) {
-
-				const username =
-					interaction
-						.fields
-						.getTextInputValue(
-							"roblox_username"
-						)
-						.trim();
-
-
-				await interaction.deferReply({
-
-					flags:
-						MessageFlags.Ephemeral,
-
-				});
-
-
-				// =================================================
-				// GET ROBLOX USER ID
-				// =================================================
-
-				let robloxUserId;
-
-				try {
-
-					robloxUserId =
-						await noblox.getIdFromUsername(
-							username
-						);
-
-				} catch (error) {
-
-					return interaction.editReply({
-
-						content:
-							`I could not find a Roblox account with the username **${username}**.`,
-
-					});
-
-				}
-
-
-				if (!robloxUserId) {
-
-					return interaction.editReply({
-
-						content:
-							`I could not find a Roblox account with the username **${username}**.`,
-
-					});
-
-				}
-
-
-				// =================================================
-				// GET ROBLOX PLAYER INFO
-				// =================================================
-
-				let robloxUser;
-
-				try {
-
-					robloxUser =
-						await noblox.getPlayerInfo(
-							robloxUserId
-						);
-
-				} catch (error) {
-
-					return interaction.editReply({
-
-						content:
-							"I could not retrieve information about that Roblox account.",
-
-					});
-
-				}
-
-
-				// =================================================
-				// CREATE DESCRIPTION CODE
-				// =================================================
-
-				const code =
-					`VER-${crypto
-						.randomBytes(2)
-						.toString("hex")
-						.toUpperCase()}`;
-
-
-				const db =
-					admin.database();
-
-
-				const userRef =
-					db
-						.ref("system")
-						.child("user_verification")
-						.child(
-							`discord_${interaction.user.id}`
-						);
-
-
-				const currentSnapshot =
-					await userRef.once("value");
-
-
-				const currentData =
-					currentSnapshot.exists()
-						? currentSnapshot.val()
-						: {};
-
-
-				await userRef.update({
-
-					verificationGuildID:
-						currentData.verificationGuildID ||
-						interaction.guild?.id,
-
-					verified:
-						false,
-
-					discordID:
-						interaction.user.id,
-
-					verificationMethod:
-						"description",
-
-					robloxID:
-						Number(robloxUserId),
-
-					robloxUsername:
-						robloxUser.username,
-
-					robloxDisplayName:
-						robloxUser.displayName,
-
-					robloxProfile:
-						`https://www.roblox.com/users/${robloxUserId}/profile`,
-
-					verificationCode:
-						code,
-
-					statecode:
-						currentData.statecode ||
-						null,
-
-					verifiedAt:
-						null,
-
-				});
-
-
-				// =================================================
-				// GET AVATAR
-				// =================================================
-
-				const avatar =
-					await fetchAvatar(
-						robloxUserId
-					);
-
-
-				// =================================================
-				// VERIFICATION EMBED
-				// =================================================
-
-				const embed =
-					new EmbedBuilder()
-						.setTitle(
-							"Roblox Verification"
-						)
-						.setDescription(
-
-							`To verify that **${robloxUser.username}** is your Roblox account:\n\n` +
-
-							`1. Visit [**your profile**](https://www.roblox.com/users/${robloxUserId}/profile)\n` +
-
-							`2. Add this code to your **About Me**:\n` +
-
-							`\`\`\`${code}\`\`\`\n` +
-
-							`3. Click **Confirm** below once you've done it.`
-
-						)
-						.addFields({
-
-							name:
-								"Roblox Profile",
-
-							value:
-								`[${robloxUser.username}](https://www.roblox.com/users/${robloxUserId}/profile)`,
-
-						})
-						.setTimestamp();
-
-
-				if (avatar) {
-
-					embed.setThumbnail(
-						avatar
-					);
-
-				}
-
-
-				// =================================================
-				// CONFIRM BUTTON
-				// =================================================
-
-				const confirmButton =
-					new ButtonBuilder()
-						.setCustomId(
-							"verification_system_confirm"
-						)
-						.setLabel(
-							"Confirm Verification"
-						)
-						.setStyle(
-							ButtonStyle.Success
-						);
-
-
-				return interaction.editReply({
-
-					embeds:
-						[embed],
-
-					components:
-
-						[
-							new ActionRowBuilder()
-								.addComponents(
-									confirmButton
-								)
-						],
-
-				});
-
-			}
-
-
-			// =====================================================
-			// CONFIRM DESCRIPTION VERIFICATION
-			// =====================================================
-
-			if (
-				interaction.isButton() &&
-				interaction.customId ===
-					"verification_system_confirm"
-			) {
-
-				await interaction.deferReply({
-
-					flags:
-						MessageFlags.Ephemeral,
-
-				});
-
-
-				// =================================================
-				// CHECK GUILD
-				// =================================================
-
-				if (!interaction.guild) {
-
-					return interaction.editReply({
-
-						content:
-							"This verification system can only be used in a server.",
-
-					});
-
-				}
-
-
-				const db =
-					admin.database();
-
-
-				// =================================================
-				// GET VERIFICATION DATA
-				// =================================================
-
-				const userRef =
-					db
-						.ref("system")
-						.child("user_verification")
-						.child(
-							`discord_${interaction.user.id}`
-						);
-
-
-				const snapshot =
-					await userRef.once("value");
-
-
-				if (!snapshot.exists()) {
-
-					return interaction.editReply({
-
-						content:
-							"No verification session was found. Please start verification again.",
-
-					});
-
-				}
-
-
-				const data =
-					snapshot.val();
-
-
-				if (
-					!data.robloxID ||
-					!data.verificationCode
-				) {
-
-					return interaction.editReply({
-
-						content:
-							"No active Roblox description verification was found.",
-
-					});
-
-				}
-
-
-				// =================================================
-				// CHECK ROBLOX DESCRIPTION
-				// =================================================
-
-				let blurb;
-
-				try {
-
-					blurb =
-						await noblox.getBlurb(
-							Number(
-								data.robloxID
-							)
-						);
-
-				} catch (error) {
-
-					return interaction.editReply({
-
-						content:
-							"I could not retrieve the Roblox profile description right now. Please try again.",
-
-					});
-
-				}
-
-
-				if (
-					typeof blurb !== "string" ||
-					!blurb.includes(
-						data.verificationCode
-					)
-				) {
-
-					return interaction.editReply({
-
-						content:
-
-							`I could not find **${data.verificationCode}** in your Roblox profile description.\n\n` +
-
-							`Add the code to your profile description and try again.`,
-
-					});
-
-				}
-
-
-				// =================================================
-				// GET DISCORD MEMBER
-				// =================================================
-
-				const member =
-					await interaction.guild.members
-						.fetch(
-							interaction.user.id
-						)
-						.catch(() => null);
-
-
-				if (!member) {
-
-					return interaction.editReply({
-
-						content:
-							"I could not find your Discord member information.",
-
-					});
-
-				}
-
-
-				// =================================================
-				// CHECK MANAGE ROLES
-				// =================================================
-
-				if (
-					!interaction.guild.members.me ||
-					!interaction.guild.members.me.permissions.has(
-						"ManageRoles"
-					)
-				) {
-
-					return interaction.editReply({
-
-						content:
-							"I need the Manage Roles permission to complete verification.",
-
-					});
-
-				}
-
-
-				// =================================================
-				// SYNCHRONIZE ROLES
-				// =================================================
-
-				const {
-					addedRoles,
-					removedRoles
-				} =
-					await synchronizeRoles(
-
-						interaction.guild,
-
-						member,
-
-						Number(
-							data.robloxID
-						)
-
-					);
-
-
-				// =================================================
-				// UPDATE NICKNAME
-				// =================================================
-
-				let nicknameUpdated =
-					false;
-
-
-				if (
-					member.id !==
-					interaction.guild.ownerId
-				) {
-
-					try {
-
-						await member.setNickname(
-							data.robloxUsername
-						);
-
-						nicknameUpdated =
-							true;
-
-					} catch (error) {
-
-						console.warn(
-							new Date(),
-							"| verification.js |",
-							"Failed to update nickname:",
-							error
-						);
-
-					}
-
-				}
-
-
-				// =================================================
-				// MARK VERIFIED
-				// =================================================
-
-				await userRef.update({
-
-					verified:
-						true,
-
-					verificationMethod:
-						"description",
-
-					robloxID:
-						Number(
-							data.robloxID
-						),
-
-					robloxUsername:
-						data.robloxUsername,
-
-					robloxDisplayName:
-						data.robloxDisplayName,
-
-					robloxProfile:
-						data.robloxProfile,
-
-					verificationCode:
-						null,
-
-					statecode:
-						null,
-
-					verifiedAt:
-						Date.now(),
-
-				});
-
-
-				// =================================================
-				// LOG UPDATE
-				// =================================================
-
-				try {
-
-					await logUpdateVerify(
-
-						interaction.client,
-
-						admin,
-
-						{
-
-							guildId:
-								interaction.guild.id,
-
-							type:
-								"update",
-
-							discordUser:
-								interaction.user.id,
-
-							robloxUsername:
-								data.robloxUsername,
-
-							robloxId:
-								data.robloxID,
-
-							nicknameChanged:
-								nicknameUpdated,
-
-							rolesAdded:
-								addedRoles.map(
-									role =>
-										role.id
-								),
-
-							rolesRemoved:
-								removedRoles.map(
-									role =>
-										role.id
-								),
-
-						}
-
-					);
-
-				} catch (loggerError) {
+				} catch (replyError) {
 
 					console.warn(
-						"Failed to log verification update:",
-						loggerError
-					);
 
-				}
-
-
-				// =================================================
-				// ROLE RESPONSE
-				// =================================================
-
-				const roleChanges = [];
-
-
-				if (
-					addedRoles.length > 0
-				) {
-
-					roleChanges.push(
-
-						`**Roles Added:** ${addedRoles
-							.map(
-								role =>
-									`<@&${role.id}>`
-							)
-							.join(", ")}`
+						new Date(),
+						"| verification.js |",
+						"Failed to send interaction error:",
+						replyError
 
 					);
 
 				}
-
-
-				if (
-					removedRoles.length > 0
-				) {
-
-					roleChanges.push(
-
-						`**Roles Removed:** ${removedRoles
-							.map(
-								role =>
-									`<@&${role.id}>`
-							)
-							.join(", ")}`
-
-					);
-
-				}
-
-
-				if (
-					roleChanges.length === 0
-				) {
-
-					roleChanges.push(
-						"No role changes were required."
-					);
-
-				}
-
-
-				// =================================================
-				// SUCCESS EMBED
-				// =================================================
-
-				const successEmbed =
-					new EmbedBuilder()
-
-						.setTitle(
-							"Verification Complete"
-						)
-
-						.setDescription(
-
-							`Your Roblox account **${data.robloxUsername}** has been successfully verified.`
-
-						)
-
-						.addFields(
-
-							{
-
-								name:
-									"Roblox Account",
-
-								value:
-									`[${data.robloxUsername}](${data.robloxProfile})`,
-
-							},
-
-							{
-
-								name:
-									"Roles",
-
-								value:
-									roleChanges.join("\n"),
-
-							}
-
-						)
-
-						.setTimestamp();
-
-
-				return interaction.editReply({
-
-					embeds:
-						[successEmbed],
-
-					components:
-						[],
-
-				});
-
-			}
-
-		} catch (error) {
-
-			console.error(
-
-				new Date(),
-				"| verification.js |",
-				"Verification interaction error:",
-				error
-
-			);
-
-
-			if (
-				!interaction.replied &&
-				!interaction.deferred
-			) {
-
-				return interaction.reply({
-
-					content:
-						"An unexpected error occurred while processing verification.",
-
-					flags:
-						MessageFlags.Ephemeral,
-
-				});
-
-			}
-
-
-			if (
-				interaction.deferred
-			) {
-
-				return interaction.editReply({
-
-					content:
-						"An unexpected error occurred while processing verification.",
-
-				});
 
 			}
 
 		}
-
-	});
+	);
 
 };
