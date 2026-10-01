@@ -1673,7 +1673,7 @@ module.exports = {
 
             } catch (loggerError) {
 
-                console.error(
+                console.warn(
                     "Failed to log verification error:",
                     loggerError
                 );
