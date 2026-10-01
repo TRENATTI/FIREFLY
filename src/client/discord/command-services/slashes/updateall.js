@@ -891,7 +891,7 @@ module.exports = {
 
         } catch (error) {
 
-            console.error(
+            console.warn(
                 "Updateall command error:",
                 error
             );
@@ -925,7 +925,7 @@ module.exports = {
 
             } catch (loggerError) {
 
-                console.error(
+                console.warn(
                     "Failed to log updateall error:",
                     loggerError
                 );
