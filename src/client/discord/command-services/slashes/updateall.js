@@ -327,18 +327,16 @@ module.exports = {
                     const rolesToRemove =
                         [];
 
-
                     // ==========================================
                     // UPDATE NICKNAME
                     // ==========================================
 
-                    let nicknameUpdated =
-                        false;
-
+                    let nicknameUpdated = false;
 
                     if (
-                        member.id !==
-                        guild.ownerId
+                        member.id !== guild.ownerId &&
+                        botHighestRole &&
+                        member.roles.highest.position < botHighestRole.position
                     ) {
 
                         try {
@@ -352,9 +350,7 @@ module.exports = {
                                     data.robloxUsername
                                 );
 
-                                nicknameUpdated =
-                                    true;
-
+                                nicknameUpdated = true;
                                 nicknamesUpdated++;
 
                             }
@@ -362,14 +358,21 @@ module.exports = {
                         } catch (error) {
 
                             console.warn(
-                                `Could not update nickname for ${member.user.tag}:`,
+                                `Could not update nickname for ${member.user.username}:`,
                                 error
                             );
 
                         }
 
-                    }
+                    } else if (
+                        member.id !== guild.ownerId
+                    ) {
 
+                        console.warn(
+                            `Cannot update nickname for ${member.user.username}: member role is higher than or equal to the bot's highest role.`
+                        );
+
+                    }
 
                     // ==========================================
                     // VERIFIED ROLE
