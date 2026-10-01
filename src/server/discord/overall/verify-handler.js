@@ -213,24 +213,24 @@ module.exports = function (
 
 			try {
 
+				// =================================================
+				// VALIDATE BINDING
+				// =================================================
+
 				if (
 					!binding ||
 					!binding.groupId ||
-					binding.rank === undefined ||
 					!binding.discordRoleId
 				) {
+
 					continue;
+
 				}
 
 
 				const groupId =
 					Number(
 						binding.groupId
-					);
-
-				const requiredRank =
-					Number(
-						binding.rank
 					);
 
 				const discordRoleId =
@@ -246,6 +246,7 @@ module.exports = function (
 						discordRoleId
 					);
 
+
 				if (!discordRole) {
 
 					console.warn(
@@ -260,11 +261,23 @@ module.exports = function (
 				// =================================================
 				// GET ROBLOX RANK
 				// =================================================
+				//
+				// This is required for BOTH:
+				//
+				// 1. Rank-specific bindings
+				// 2. Entire-group bindings
+				//
+				// Rank 0 means the user is not in the group.
+				// Any rank above 0 means they are in the group.
+				// =================================================
 
 				let userRank;
 
+
 				if (
-					rankCache.has(groupId)
+					rankCache.has(
+						groupId
+					)
 				) {
 
 					userRank =
@@ -286,6 +299,101 @@ module.exports = function (
 					);
 
 				}
+
+
+				// =================================================
+				// ENTIRE GROUP BINDING
+				// =================================================
+				//
+				// Example:
+				//
+				// entireGroup: true
+				//
+				// Any Roblox rank > 0:
+				//     ADD ROLE
+				//
+				// Rank 0:
+				//     REMOVE ROLE
+				// =================================================
+
+				if (
+					binding.entireGroup === true
+				) {
+
+					// =============================================
+					// USER IS IN GROUP
+					// =============================================
+
+					if (
+						userRank > 0
+					) {
+
+						if (
+							!member.roles.cache.has(
+								discordRoleId
+							)
+						) {
+
+							rolesToAdd.push(
+								discordRole
+							);
+
+						}
+
+					}
+
+					// =============================================
+					// USER IS NOT IN GROUP
+					// =============================================
+
+					else {
+
+						if (
+							member.roles.cache.has(
+								discordRoleId
+							)
+						) {
+
+							rolesToRemove.push(
+								discordRole
+							);
+
+						}
+
+					}
+
+
+					// =============================================
+					// SKIP RANK-SPECIFIC LOGIC
+					// =============================================
+
+					continue;
+
+				}
+
+
+				// =================================================
+				// RANK-SPECIFIC BINDING
+				// =================================================
+
+				if (
+					binding.rank === undefined ||
+					binding.rank === null
+				) {
+
+					console.warn(
+						`Binding ${bindingId} has no rank and is not marked as an entire-group binding.`
+					);
+
+					continue;
+
+				}
+
+
+				const requiredRank =
+					Number(
+						binding.rank
+					);
 
 
 				// =================================================
@@ -321,9 +429,11 @@ module.exports = function (
 					const userLeftGroup =
 						userRank === 0;
 
+
 					const shouldRemove =
 						userLeftGroup ||
 						binding.removeOnLeave === true;
+
 
 					if (
 						shouldRemove &&
