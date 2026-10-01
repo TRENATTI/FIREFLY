@@ -17,24 +17,12 @@ module.exports = {
         .setDescription("Shows users who have reached level 5 or higher."),
 
     subdata: {
-        cooldown: 3,
+        cooldown: 300, // 5 minutes
     },
 
     async execute(interaction, noblox, admin) {
         const db = admin.database();
 
-        if (
-			interaction.user.id !== "170639211182030850" &&
-			interaction.user.id !== "463516784578789376" &&
-			interaction.user.id !== "206090047462703104" &&
-			interaction.user.id !== "1154775391597240391" &&
-			interaction.user.id !== "175922772923383808"
-		) {
-			return interaction.reply({
-				content: "You are not authorized to use this command.",
-				flags: MessageFlags.Ephemeral,
-			});
-		}
 
         const USERS_PATH =
             "system/user_leveling/eternal_conflict_hub/users";
