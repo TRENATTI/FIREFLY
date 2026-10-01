@@ -17,6 +17,10 @@ module.exports = {
             "Bind a Discord role to a Roblox group or group rank."
         )
 
+        // ==========================================
+        // GROUP
+        // ==========================================
+
         .addIntegerOption(option =>
             option
                 .setName("group")
@@ -25,6 +29,10 @@ module.exports = {
                 )
                 .setRequired(true)
         )
+
+        // ==========================================
+        // ENTIRE GROUP
+        // ==========================================
 
         .addBooleanOption(option =>
             option
@@ -35,6 +43,10 @@ module.exports = {
                 .setRequired(true)
         )
 
+        // ==========================================
+        // DISCORD ROLE
+        // ==========================================
+
         .addRoleOption(option =>
             option
                 .setName("discord-role")
@@ -42,7 +54,12 @@ module.exports = {
                     "The Discord role to bind."
                 )
                 .setRequired(true)
-        )        
+        )
+
+        // ==========================================
+        // RANK
+        // ==========================================
+
         .addIntegerOption(option =>
             option
                 .setName("rank")
@@ -52,6 +69,19 @@ module.exports = {
                 .setRequired(false)
                 .setMinValue(0)
                 .setMaxValue(255)
+        )
+
+        // ==========================================
+        // REMOVE ON LEAVE
+        // ==========================================
+
+        .addBooleanOption(option =>
+            option
+                .setName("remove-on-leave")
+                .setDescription(
+                    "Remove the role when the user changes away from this rank."
+                )
+                .setRequired(false)
         ),
 
 
@@ -110,6 +140,9 @@ module.exports = {
 
         const rank =
             interaction.options.getInteger("rank");
+
+        const removeOnLeave =
+            interaction.options.getBoolean("remove-on-leave") ?? false;
 
         const discordRole =
             interaction.options.getRole(
@@ -199,21 +232,9 @@ module.exports = {
 
             if (entireGroup) {
 
-                // ======================================
-                // UNIQUE BINDING ID
-                // ======================================
-                //
-                // Group + Discord Role
-                //
-                // ======================================
-
                 const bindingId =
                     `${groupId}_GROUP_${discordRole.id}`;
 
-
-                // ======================================
-                // FIREBASE REFERENCE
-                // ======================================
 
                 const ref = admin
                     .database()
@@ -245,6 +266,12 @@ module.exports = {
                 // ======================================
                 // SAVE GROUP BINDING
                 // ======================================
+                //
+                // removeOnLeave is false here because
+                // group-wide bindings automatically remove
+                // the role when the user leaves the group.
+                //
+                // ======================================
 
                 await ref.set({
 
@@ -254,8 +281,6 @@ module.exports = {
                     groupName:
                         group.name,
 
-                    // Indicates that this binding
-                    // applies to every rank.
                     entireGroup:
                         true,
 
@@ -264,6 +289,9 @@ module.exports = {
 
                     rankName:
                         null,
+
+                    removeOnLeave:
+                        false,
 
                     discordRoleId:
                         discordRole.id,
@@ -345,10 +373,6 @@ module.exports = {
             // ==========================================
             // UNIQUE BINDING ID
             // ==========================================
-            //
-            // Group + Rank + Discord Role
-            //
-            // ==========================================
 
             const bindingId =
                 `${groupId}_${rank}_${discordRole.id}`;
@@ -406,6 +430,9 @@ module.exports = {
                 rankName:
                     robloxRank.name,
 
+                removeOnLeave:
+                    removeOnLeave,
+
                 discordRoleId:
                     discordRole.id,
 
@@ -436,7 +463,8 @@ module.exports = {
 
             return interaction.reply({
                 content:
-                    `Successfully bound **${discordRole.name}** to **${group.name} — ${robloxRank.name} (${rank})**.`,
+                    `Successfully bound **${discordRole.name}** to **${group.name} — ${robloxRank.name} (${rank})**.\n\n` +
+                    `**Remove on rank change:** ${removeOnLeave ? "Yes" : "No"}`,
                 ephemeral: true
             });
 
@@ -451,7 +479,7 @@ module.exports = {
 
             return interaction.reply({
                 content:
-                    "An error occurred while creating the rank binding. Make sure the Roblox group exists and Noblox is authenticated.",
+                    "An error occurred while creating the binding. Make sure the Roblox group exists and Noblox is authenticated.",
                 ephemeral: true
             });
 
