@@ -22,7 +22,7 @@ module.exports = {
         ),
 
     subdata: {
-        cooldown: 3,
+        cooldown: 10,
     },
 
 
