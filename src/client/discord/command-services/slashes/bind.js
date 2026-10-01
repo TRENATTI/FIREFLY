@@ -14,7 +14,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("bind")
         .setDescription(
-            "Bind a Discord role to a Roblox group rank."
+            "Bind a Discord role to a Roblox group or group rank."
         )
 
         .addIntegerOption(option =>
@@ -26,13 +26,22 @@ module.exports = {
                 .setRequired(true)
         )
 
+        .addBooleanOption(option =>
+            option
+                .setName("entire-group")
+                .setDescription(
+                    "Bind this Discord role to everyone in the Roblox group."
+                )
+                .setRequired(true)
+        )
+
         .addIntegerOption(option =>
             option
                 .setName("rank")
                 .setDescription(
-                    "The Roblox rank number."
+                    "The Roblox rank number. Not required when entire-group is true."
                 )
-                .setRequired(true)
+                .setRequired(false)
                 .setMinValue(0)
                 .setMaxValue(255)
         )
@@ -95,6 +104,9 @@ module.exports = {
 
         const groupId =
             interaction.options.getInteger("group");
+
+        const entireGroup =
+            interaction.options.getBoolean("entire-group");
 
         const rank =
             interaction.options.getInteger("rank");
@@ -182,6 +194,130 @@ module.exports = {
 
 
             // ==========================================
+            // GROUP-WIDE BINDING
+            // ==========================================
+
+            if (entireGroup) {
+
+                // ======================================
+                // UNIQUE BINDING ID
+                // ======================================
+                //
+                // Group + Discord Role
+                //
+                // ======================================
+
+                const bindingId =
+                    `${groupId}_GROUP_${discordRole.id}`;
+
+
+                // ======================================
+                // FIREBASE REFERENCE
+                // ======================================
+
+                const ref = admin
+                    .database()
+                    .ref("system")
+                    .child("role_bindings")
+                    .child(interaction.guild.id)
+                    .child(bindingId);
+
+
+                // ======================================
+                // CHECK EXISTING BINDING
+                // ======================================
+
+                const existing =
+                    await ref.get();
+
+
+                if (existing.exists()) {
+
+                    return interaction.reply({
+                        content:
+                            `**${discordRole.name}** is already bound to the entire Roblox group **${group.name}**.`,
+                        ephemeral: true
+                    });
+
+                }
+
+
+                // ======================================
+                // SAVE GROUP BINDING
+                // ======================================
+
+                await ref.set({
+
+                    groupId:
+                        groupId,
+
+                    groupName:
+                        group.name,
+
+                    // Indicates that this binding
+                    // applies to every rank.
+                    entireGroup:
+                        true,
+
+                    rank:
+                        null,
+
+                    rankName:
+                        null,
+
+                    discordRoleId:
+                        discordRole.id,
+
+                    discordRoleName:
+                        discordRole.name,
+
+                    createdBy:
+                        interaction.user.id,
+
+                    createdAt:
+                        Date.now()
+
+                });
+
+
+                // ======================================
+                // CLEAR CACHE
+                // ======================================
+
+                invalidateRoleBindings(
+                    interaction.guild.id
+                );
+
+
+                // ======================================
+                // SUCCESS
+                // ======================================
+
+                return interaction.reply({
+                    content:
+                        `Successfully bound **${discordRole.name}** to the entire Roblox group **${group.name}**.`,
+                    ephemeral: true
+                });
+
+            }
+
+
+            // ==========================================
+            // RANK BINDING
+            // ==========================================
+
+            if (rank === null) {
+
+                return interaction.reply({
+                    content:
+                        "You must provide a **rank** when **entire-group** is set to false.",
+                    ephemeral: true
+                });
+
+            }
+
+
+            // ==========================================
             // GET ROBLOX RANKS
             // ==========================================
 
@@ -212,8 +348,6 @@ module.exports = {
             //
             // Group + Rank + Discord Role
             //
-            // This allows multiple Discord roles
-            // to be bound to the same Roblox rank.
             // ==========================================
 
             const bindingId =
@@ -252,7 +386,7 @@ module.exports = {
 
 
             // ==========================================
-            // SAVE BINDING
+            // SAVE RANK BINDING
             // ==========================================
 
             await ref.set({
@@ -262,6 +396,9 @@ module.exports = {
 
                 groupName:
                     group.name,
+
+                entireGroup:
+                    false,
 
                 rank:
                     rank,

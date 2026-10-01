@@ -278,11 +278,6 @@ module.exports = {
                             binding.groupId
                         );
 
-                    const requiredRank =
-                        Number(
-                            binding.rank
-                        );
-
                     const discordRoleId =
                         binding.discordRoleId;
 
@@ -310,6 +305,13 @@ module.exports = {
 
                     // ==========================================
                     // GET ROBLOX RANK FROM CACHE
+                    // ==========================================
+                    //
+                    // Both rank-specific and entire-group
+                    // bindings need the user's rank.
+                    //
+                    // The cache means we only call
+                    // getRankInGroup() once per group.
                     // ==========================================
 
                     let userRank;
@@ -344,6 +346,88 @@ module.exports = {
 
 
                     // ==========================================
+                    // ENTIRE GROUP BINDING
+                    // ==========================================
+                    //
+                    // Any rank above 0 means the user is
+                    // currently a member of the group.
+                    //
+                    // Rank 0 means they are not in the group.
+                    // ==========================================
+
+                    if (
+                        binding.entireGroup === true
+                    ) {
+
+                        // ======================================
+                        // USER IS IN GROUP
+                        // ======================================
+
+                        if (
+                            userRank > 0
+                        ) {
+
+                            if (
+                                !member.roles.cache.has(
+                                    discordRoleId
+                                )
+                            ) {
+
+                                rolesToAdd.push(
+                                    discordRole
+                                );
+
+                            }
+
+                        }
+
+                        // ======================================
+                        // USER IS NOT IN GROUP
+                        // ======================================
+
+                        else {
+
+                            const shouldRemove =
+                                binding.removeOnLeave === true ||
+                                userRank === 0;
+
+
+                            if (
+                                shouldRemove &&
+                                member.roles.cache.has(
+                                    discordRoleId
+                                )
+                            ) {
+
+                                rolesToRemove.push(
+                                    discordRole
+                                );
+
+                            }
+
+                        }
+
+
+                        // ======================================
+                        // DONE WITH THIS BINDING
+                        // ======================================
+
+                        continue;
+
+                    }
+
+
+                    // ==========================================
+                    // RANK-SPECIFIC BINDING
+                    // ==========================================
+
+                    const requiredRank =
+                        Number(
+                            binding.rank
+                        );
+
+
+                    // ==========================================
                     // RANK MATCHES
                     // ==========================================
 
@@ -374,7 +458,7 @@ module.exports = {
                     else {
 
                         const userLeftGroup =
-						    userRank === 0;
+                            userRank === 0;
 
                         const shouldRemove =
                             userLeftGroup ||
