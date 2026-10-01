@@ -332,7 +332,7 @@ async function logUpdateVerify(
 
     } catch (error) {
 
-        console.error(
+        console.warn(
             "Logger error:",
             error
         );
