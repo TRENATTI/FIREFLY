@@ -2075,13 +2075,6 @@ module.exports = function (
 						roleChanges.push(
 							"**Nickname:** Updated"
 						);
-
-					} else {
-
-						roleChanges.push(
-							"**Nickname:** Could not be updated due to Discord permissions."
-						);
-
 					}
 
 
