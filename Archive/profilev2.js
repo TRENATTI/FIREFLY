@@ -323,7 +323,7 @@ module.exports = {
 										console.log("Reply edited.");
 										createButtonBuilder(newembed);
 									})
-									.catch(console.error);
+									.catch(console.warn);
 								//interaction.deferReply()
 								//createButtonBuilder(embed)
 							})
@@ -449,7 +449,7 @@ module.exports = {
 										console.log("Reply edited.");
 										createButtonBuilder(newembed);
 									})
-									.catch(console.error);
+									.catch(console.warn);
 							})
 							.catch((error) => console.log(error));
 					}
@@ -470,7 +470,7 @@ module.exports = {
 					components: [normal_profile_actionrowbuilder],
 				})
 				.then(() => console.log(`Reply edited.`))
-				.catch(console.error);
+				.catch(console.warn);
 
 			const profile_to_groups_filter = (profile_to_groups_i) =>
 				profile_to_groups_i.user.id === interaction.user.id;
@@ -485,7 +485,7 @@ module.exports = {
 					wait(1000);
 					i.editReply({ content: `Groups Button was Clicked!` })
 						.then(() => console.log(`Reply edited.`))
-						.catch(console.error);
+						.catch(console.warn);
 					wait(1000);
 					const newinteractionembed = EmbedBuilder.from(
 						interactionembed
@@ -502,7 +502,7 @@ module.exports = {
 						components: [group_profile_actionrowbuilder],
 					})
 						.then(() => console.log(`Reply edited.`))
-						.catch(console.error);
+						.catch(console.warn);
 				}
 
 				if (i.customId === `profile_to_achievements`) {
@@ -510,7 +510,7 @@ module.exports = {
 					wait(1000);
 					i.editReply({ content: `Achievements Button was Clicked!` })
 						.then(() => console.log(`Reply edited.`))
-						.catch(console.error);
+						.catch(console.warn);
 					wait(1000);
 					const newinteractionembed = EmbedBuilder.from(
 						interactionembed
@@ -527,7 +527,7 @@ module.exports = {
 						components: [group_profile_actionrowbuilder],
 					})
 						.then(() => console.log(`Reply edited.`))
-						.catch(console.error);
+						.catch(console.warn);
 				}
 
 				if (i.customId === `profile_to_moderation`) {
@@ -535,7 +535,7 @@ module.exports = {
 					wait(1000);
 					i.editReply({ content: `Moderations Button was Clicked!` })
 						.then(() => console.log(`Reply edited.`))
-						.catch(console.error);
+						.catch(console.warn);
 					wait(1000);
 					const newinteractionembed = EmbedBuilder.from(
 						interactionembed
@@ -552,7 +552,7 @@ module.exports = {
 						components: [group_profile_actionrowbuilder],
 					})
 						.then(() => console.log(`Reply edited.`))
-						.catch(console.error);
+						.catch(console.warn);
 				}
 
 				if (i.customId === `back_to_profile`) {
@@ -560,7 +560,7 @@ module.exports = {
 					wait(1000);
 					i.editReply({ content: `Back Button was Clicked!` })
 						.then(() => console.log(`Reply edited.`))
-						.catch(console.error);
+						.catch(console.warn);
 
 					wait(1000);
 					i.editReply({
@@ -569,7 +569,7 @@ module.exports = {
 						components: [normal_profile_actionrowbuilder],
 					})
 						.then(() => console.log(`Reply edited.`))
-						.catch(console.error);
+						.catch(console.warn);
 				}
 			});
 			profile_to_groups_collector.on(`end`, (collected) => {
