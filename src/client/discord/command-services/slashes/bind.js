@@ -471,7 +471,7 @@ module.exports = {
 
         } catch (error) {
 
-            console.error(
+            console.warn(
                 "Bind error:",
                 error
             );
