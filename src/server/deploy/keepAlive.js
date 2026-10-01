@@ -75,7 +75,7 @@ function keepAlive(client, noblox, currentUser, admin, token, applicationid, pre
 
 			return res.send(html);
 		} catch (error) {
-			console.error("Home page error:", error);
+			console.warn("Home page error:", error);
 
 			return res.status(500).send("Unable to load verification page.");
 		}
@@ -159,7 +159,7 @@ function keepAlive(client, noblox, currentUser, admin, token, applicationid, pre
 
 			return res.redirect(authorizationURL);
 		} catch (error) {
-			console.error("Roblox OAuth start error:", error);
+			console.warn("Roblox OAuth start error:", error);
 
 			return res.status(500).send("Unable to start Roblox authentication.");
 		}
@@ -257,7 +257,7 @@ function keepAlive(client, noblox, currentUser, admin, token, applicationid, pre
 					},
 				});
 			} catch (error) {
-				console.error("Roblox token exchange failed:", error.response?.data || error.message);
+				console.warn("Roblox token exchange failed:", error.response?.data || error.message);
 
 				return res.status(400).send("Failed to authenticate with Roblox.");
 			}
@@ -269,7 +269,7 @@ function keepAlive(client, noblox, currentUser, admin, token, applicationid, pre
 			const access_token = tokenResponse.data.access_token;
 
 			if (!access_token) {
-				console.error("No Roblox access token returned:", tokenResponse.data);
+				console.warn("No Roblox access token returned:", tokenResponse.data);
 
 				return res.status(400).send("Roblox did not return an access token.");
 			}
@@ -289,7 +289,7 @@ function keepAlive(client, noblox, currentUser, admin, token, applicationid, pre
 			if (!userInfoResponse.ok) {
 				const errorText = await userInfoResponse.text();
 
-				console.error("Roblox userinfo failed:", userInfoResponse.status, errorText);
+				console.warn("Roblox userinfo failed:", userInfoResponse.status, errorText);
 
 				return res.status(400).send("Failed to retrieve Roblox account information.");
 			}
@@ -301,7 +301,7 @@ function keepAlive(client, noblox, currentUser, admin, token, applicationid, pre
 			// ======================================
 
 			if (!userInfo.sub) {
-				console.error("Roblox userinfo missing sub:", userInfo);
+				console.warn("Roblox userinfo missing sub:", userInfo);
 
 				return res.status(400).send("Roblox account information was incomplete.");
 			}
@@ -565,7 +565,7 @@ function keepAlive(client, noblox, currentUser, admin, token, applicationid, pre
 
 				} catch (error) {
 
-					console.error(
+					console.warn(
 						"logUpdateVerify failed:",
 						error
 					);
@@ -705,7 +705,7 @@ function keepAlive(client, noblox, currentUser, admin, token, applicationid, pre
 
                     `);
 		} catch (error) {
-			console.error("Verification error:", error);
+			console.warn("Verification error:", error);
 
 			return res.status(500).send("An error occurred while verifying your account.");
 		}
