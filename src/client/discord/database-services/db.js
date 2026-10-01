@@ -30,7 +30,7 @@ try {
   db = mysql.createPool(dbConfig);
   console.log("✅ Securely connected to MySQL (pool).");
 } catch (err) {
-  console.error("❌ MySQL pool creation failed:", err);
+  console.warn("❌ MySQL pool creation failed:", err);
   process.exit(1);
 }
 
@@ -120,7 +120,7 @@ async function exec(query, params = []) {
     const [rows] = await db.execute(query, params);
     return rows;
   } catch (err) {
-    console.error("❌ Database query error:", err);
+    console.warn("❌ Database query error:", err);
     throw err;
   }
 }
@@ -252,7 +252,7 @@ async function setUserBaseData(discordId, robloxId, robloxUsername) {
 /* ------------------------------------------------ */
 
 db.on("error", (err) => {
-  console.error("❌ MySQL Pool Error:", err);
+  console.warn("❌ MySQL Pool Error:", err);
 });
 
 process.on("SIGINT", async () => {
