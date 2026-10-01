@@ -150,7 +150,7 @@ module.exports = {
 
         } catch (error) {
 
-            console.error(
+            console.warn(
                 "Log channel binding error:",
                 error
             );
