@@ -165,7 +165,7 @@ module.exports = function (client, noblox, currentUser, admin, token, applicatio
 
 					.setColor(0x1f85dd)
                     .setAuthor({
-                            name: `${interaction.guild.name} | ${interaction.author.name}`,
+                            name: `${interaction.guild.name} | ${interaction.user.username}`,
                             iconURL: interaction.guild.iconURL(),
                         })
 					.setTimestamp();
