@@ -164,9 +164,12 @@ module.exports = function (client, noblox, currentUser, admin, token, applicatio
 				const embed = new EmbedBuilder()
 
 					.setColor(0x1f85dd)
-
+                    .setAuthor({
+                            name: `${interaction.guild.name} | ${interaction.author.name}`,
+                            iconURL: interaction.guild.iconURL(),
+                        })
 					.setTimestamp();
-
+                    
 				if (title) {
                     embed.setTitle(
                         title
@@ -180,20 +183,18 @@ module.exports = function (client, noblox, currentUser, admin, token, applicatio
                 }
 				if (footer) {
 					embed.setFooter({
-						text: `${footer} | [Discord Invite](https://discord.gg/PsdEAAuG4K)]`,
+						text: `${footer} | [Discord Invite](https://discord.gg/PsdEAAuG4K)`,
                          iconURL: interaction.guild.iconURL(),
                     });
                 } else {
                     embed.setFooter({
-                        text: `https://discord.gg/PsdEAAuG4K`,
+                        text: `[Discord Invite](https://discord.gg/PsdEAAuG4K)`,
                         iconURL: interaction.guild.iconURL(),
                     })
 				}
 
                 if (thumbnail) {
-                    embed.setThumbnail({
-                        url: thumbnail
-                    })
+                    embed.setThumbnail(thumbnail)
                 }
 				// =================================================
 				// SEND EMBED
