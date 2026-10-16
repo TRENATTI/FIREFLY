@@ -171,17 +171,26 @@ module.exports = function (client, noblox, currentUser, admin, token, applicatio
 
 					.setTimestamp();
 
-				// =================================================
-				// SET FOOTER
-				// =================================================
+				if (title) {
+                    embed.setTitle(
+                        title
+                    )
+                }
 
+                if (description) {
+                    embed.setDescription(
+                        description
+                    )
+                }
 				if (footer) {
 					embed.setFooter({
-						text: `${footer} | https://discord.gg/PsdEAAuG4K`,
-					});
+						text: `${footer} | [Discord Invite](https://discord.gg/PsdEAAuG4K)]`,
+                         iconURL: interaction.guild.iconURL(),
+                    });
                 } else {
                     embed.setFooter({
-                        text: `https://discord.gg/PsdEAAuG4K`
+                        text: `https://discord.gg/PsdEAAuG4K`,
+                        iconURL: interaction.guild.iconURL(),
                     })
 				}
 
