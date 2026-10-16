@@ -133,7 +133,7 @@ module.exports = function (client, noblox, currentUser, admin, token, applicatio
 
 				const footer = interaction.fields.getTextInputValue("embed_footer").trim();
 
-                const thumbnail = interaction.fields.getTextInputValue("embed_thumbnail").trim();
+                const image = interaction.fields.getTextInputValue("embed_thumbnail").trim();
 
 				// =================================================
 				// VALIDATE FORM
@@ -165,9 +165,10 @@ module.exports = function (client, noblox, currentUser, admin, token, applicatio
 
 					.setColor(0x1f85dd)
                     .setAuthor({
-                            name: `${interaction.guild.name} | ${interaction.author.name}`,
+                            name: `${interaction.guild.name} | ${interaction.user.username}`,
                             iconURL: interaction.guild.iconURL(),
                         })
+                    .setThumbnail(interaction.guild.iconURL())
 					.setTimestamp();
                     
 				if (title) {
@@ -193,8 +194,8 @@ module.exports = function (client, noblox, currentUser, admin, token, applicatio
                     })
 				}
 
-                if (thumbnail) {
-                    embed.setThumbnail(thumbnail)
+                if (image) {
+                    embed.setImage(image)
                 }
 				// =================================================
 				// SEND EMBED
