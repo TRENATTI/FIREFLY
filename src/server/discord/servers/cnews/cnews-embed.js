@@ -391,7 +391,7 @@ module.exports = function (
                 // =================================================
 
                 const container = new ContainerBuilder()
-                    .setAccentColor(0x1f85dd);
+                    .setAccentColor(0x5F181B);
 
                 // =================================================
                 // ARTICLE TITLE
