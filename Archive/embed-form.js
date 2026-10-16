@@ -46,43 +46,69 @@ module.exports = function (
                     .setCustomId("embed_form_modal")
                     .setTitle("Create Embed");
 
-                const titleInput = new TextInputBuilder()
-                    .setCustomId("embed_title")
-                    .setLabel("Title")
-                    .setPlaceholder("Enter the title")
+                const authorInput = new TextInputBuilder()
+                    .setCustomId("embed_author")
+                    .setLabel("author")
+                    .setPlaceholder("Enter the Author")
                     .setStyle(TextInputStyle.Short)
                     .setMaxLength(256)
-                    .setRequired(false);
+                    .setRequired(true);
+                const subjectInput = new TextInputBuilder()
+                    .setCustomId("embed_subject")
+                    .setLabel("author")
+                    .setPlaceholder("Enter the Subject")
+                    .setStyle(TextInputStyle.Short)
+                    .setMaxLength(256)
+                    .setRequired(true);
 
+                const storyInput = new TextInputBuilder()
+                    .setCustomId("embed_story")
+                    .setLabel("Story")
+                    .setPlaceholder("Enter the Story")
+                    .setStyle(TextInputStyle.Short)
+                    .setMaxLength(256)
+                    .setRequired(true);
+
+                
+                const archiveInput = new TextInputBuilder()
+                    .setCustomId("embed_archive")
+                    .setLabel("archive")
+                    .setPlaceholder("Enter the Trello Archive")   
+                    .setStyle(TextInputStyle.Short)
+                    .setMaxLength(256)
+                    .setRequired(true);
+                
                 const descriptionInput = new TextInputBuilder()
                     .setCustomId("embed_description")
-                    .setLabel("Description")
-                    .setPlaceholder("Enter the description")
+                    .setLabel("description")
+                    .setPlaceholder("Enter the Description")
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setMaxLength(4000)
+                    .setRequired(false);
+                const sourcesInput = new TextInputBuilder()
+                    .setCustomId("embed_archive")
+                    .setLabel("archive")
+                    .setPlaceholder("Enter the Sources")
                     .setStyle(TextInputStyle.Paragraph)
                     .setMaxLength(4000)
                     .setRequired(false);
 
-                const footerInput = new TextInputBuilder()
-                    .setCustomId("embed_footer")
-                    .setLabel("Footer / Archive URL")
-                    .setPlaceholder("Enter footer text or archive URL")
-                    .setStyle(TextInputStyle.Short)
-                    .setMaxLength(2000)
-                    .setRequired(false);
-
                 const imageInput = new TextInputBuilder()
-                    .setCustomId("embed_thumbnail")
-                    .setLabel("Image URL (optional)")
-                    .setPlaceholder("https://example.com/image.png")
+                    .setCustomId("embed_images")
+                    .setLabel("Image URLs")
+                    .setPlaceholder("Enter the Images")
                     .setStyle(TextInputStyle.Short)
                     .setMaxLength(2000)
                     .setRequired(false);
 
                 modal.addComponents(
-                    new ActionRowBuilder().addComponents(titleInput),
+                    new ActionRowBuilder().addComponents(authorInput),
+                    new ActionRowBuilder().addComponents(subjectInput),
+                    new ActionRowBuilder().addComponents(storyInput),
+                    new ActionRowBuilder().addComponents(archiveInput),
                     new ActionRowBuilder().addComponents(descriptionInput),
-                    new ActionRowBuilder().addComponents(footerInput),
-                    new ActionRowBuilder().addComponents(imageInput)
+                    new ActionRowBuilder().addComponents(sourcesInput),
+                    new ActionRowBuilder().addComponents(imageInput),
                 );
 
                 return await interaction.showModal(modal);
@@ -104,20 +130,32 @@ module.exports = function (
                 // GET FORM VALUES
                 // =================================================
 
-                const title = interaction.fields
-                    .getTextInputValue("embed_title")
+                const author = interaction.fields
+                    .getTextInputValue("embed_author")
+                    .trim();
+
+                const subject = interaction.fields
+                    .getTextInputValue("embed_subject")
+                    .trim();
+
+                const story = interaction.fields
+                    .getTextInputValue("embed_story")
+                    .trim();
+
+                const archive = interaction.fields
+                    .getTextInputValue("embed_archive")
                     .trim();
 
                 const description = interaction.fields
                     .getTextInputValue("embed_description")
                     .trim();
 
-                const footer = interaction.fields
-                    .getTextInputValue("embed_footer")
+                const sources = interaction.fields
+                    .getTextInputValue("embed_sources")
                     .trim();
 
-                const image = interaction.fields
-                    .getTextInputValue("embed_thumbnail")
+                const images = interaction.fields
+                    .getTextInputValue("embed_images")
                     .trim();
 
                 // =================================================
@@ -126,7 +164,7 @@ module.exports = function (
 
                 let validImage = null;
 
-                if (image) {
+                if (images) {
                     try {
                         const parsedURL = new URL(image);
 
