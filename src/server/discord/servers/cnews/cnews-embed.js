@@ -459,7 +459,7 @@ module.exports = function (
 
                     container.addTextDisplayComponents(
                         new TextDisplayBuilder().setContent(
-                            `## Sources\n${sourceLines}`
+                            `**Sources**\n${sourceLines}`
                         )
                     );
                 }
@@ -475,7 +475,7 @@ module.exports = function (
 
                     container.addTextDisplayComponents(
                         new TextDisplayBuilder().setContent(
-                            "## Images"
+                            "**Images**"
                         )
                     );
 
