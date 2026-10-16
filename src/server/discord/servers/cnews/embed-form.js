@@ -165,10 +165,9 @@ module.exports = function (client, noblox, currentUser, admin, token, applicatio
 
 					.setColor(0x1f85dd)
                     .setAuthor({
-                            name: `${interaction.guild.name} | ${interaction.user.username}`,
-                            iconURL: interaction.guild.iconURL(),
+                            name: `From ${interaction.guild.name} | By ${interaction.user.username}`,
+                            iconURL: interaction.user.displayAvatarURL(),
                         })
-                    .setThumbnail(interaction.guild.iconURL())
 					.setTimestamp();
                     
 				if (title) {
@@ -182,14 +181,15 @@ module.exports = function (client, noblox, currentUser, admin, token, applicatio
                         description
                     )
                 }
+
 				if (footer) {
 					embed.setFooter({
-						text: `${footer} | [Discord Invite](https://discord.gg/PsdEAAuG4K)`,
+						text: `${footer} | Add our news via https://discord.gg/PsdEAAuG4K`,
                          iconURL: interaction.guild.iconURL(),
                     });
                 } else {
                     embed.setFooter({
-                        text: `[Discord Invite](https://discord.gg/PsdEAAuG4K)`,
+                        text: `Add our news via https://discord.gg/PsdEAAuG4K`,
                         iconURL: interaction.guild.iconURL(),
                     })
 				}
@@ -197,6 +197,7 @@ module.exports = function (client, noblox, currentUser, admin, token, applicatio
                 if (image) {
                     embed.setImage(image)
                 }
+                
 				// =================================================
 				// SEND EMBED
 				// =================================================
