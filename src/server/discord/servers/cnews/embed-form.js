@@ -165,10 +165,6 @@ module.exports = function (client, noblox, currentUser, admin, token, applicatio
 
 					.setColor(0x1f85dd)
 
-					.setTitle(title)
-
-					.setDescription(description)
-
 					.setTimestamp();
 
 				if (title) {
