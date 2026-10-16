@@ -185,6 +185,11 @@ module.exports = function (client, noblox, currentUser, admin, token, applicatio
                     })
 				}
 
+                if (thumbnail) {
+                    embed.setThumbnail({
+                        url: thumbnail
+                    })
+                }
 				// =================================================
 				// SEND EMBED
 				// =================================================
