@@ -11,6 +11,8 @@ const {
     MediaGalleryItemBuilder,
     ButtonBuilder,
     ButtonStyle,
+    SectionBuilder,
+    ThumbnailBuilder
 } = require("discord.js");
 
 require("dotenv").config();
