@@ -403,7 +403,7 @@ module.exports = function (
                      new SectionBuilder()
                         .addTextDisplayComponents(
                             new TextDisplayBuilder()
-                                .setContent(`# ${subject}`)
+                                .setContent(`# ${story}`)
                         )
                         .setThumbnailAccessory(
                             new ThumbnailBuilder()
