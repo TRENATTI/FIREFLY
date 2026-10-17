@@ -391,17 +391,23 @@ module.exports = function (
                 // =================================================
 
                 const container = new ContainerBuilder()
-                    .setAccentColor(0x1f85dd);
+                    .setAccentColor(0x5F181B);
 
                 // =================================================
                 // ARTICLE TITLE
                 // =================================================
 
-                container.addTextDisplayComponents(
-                    new TextDisplayBuilder().setContent(
-                        `# ${subject}`
-                    )
-                );
+                container.addSectionComponents(
+                     new SectionBuilder()
+                        .addTextDisplayComponents(
+                            new TextDisplayBuilder()
+                                .setContent(`# ${subject}`)
+                        )
+                        .setThumbnailAccessory(
+                            new ThumbnailBuilder()
+                                .setURL("https://i.imgur.com/GwzTTC4.png")
+                        )
+                )
 
                 container.addSeparatorComponents(
                     new SeparatorBuilder()
